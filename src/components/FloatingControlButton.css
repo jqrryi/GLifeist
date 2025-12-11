@@ -1,0 +1,46 @@
+/* src/components/FloatingControlButton.css */
+.floating-control-button {
+  position: fixed;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 30%, #764ba2 70%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  cursor: move;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  color: white;
+  font-size: 24px;
+}
+
+.floating-control-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.floating-control-button.dragging {
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  cursor: grabbing;
+}
+
+.button-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .floating-control-button {
+    width: 40px;
+    height: 40px;
+    font-size: 24px;
+  }
+}

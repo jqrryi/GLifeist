@@ -1,0 +1,830 @@
+/* src/components/MarkdownEditor.css */
+
+/* 基础编辑器容器 */
+.markdown-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+.markdown-editor.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  border: none;
+  border-radius: 0;
+}
+
+/* 特定编辑器高度 */
+.daily-log-editor {
+  height: 40vh;
+}
+
+.task-notes-editor-desktop {
+  height: 250px;
+  width: 350px;
+  /*height: 30vh;*/
+  /*width: 18vw;*/
+}
+.task-notes-editor-mobile {
+  height: 380px;
+  width: 320px;
+  /*height: 50vh;*/
+  /*width: 63vw;*/
+}
+
+.task-notes-editor-mobile.fullscreen {
+  position: fixed !important;
+  top: 100% !important;
+  /*bottom: 10% !important;*/
+  /*left: 0 !important;*/
+  /*transform: none !important;*/
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 9999 !important; /* 提高z-index确保在最上层 */
+  /*position: fixed;*/
+  /*bottom: 10vh;*/
+  border: none;
+  border-radius: 0;
+}
+
+.task-notes-editor-desktop.fullscreen {
+  position: fixed !important;
+  top: 5% !important;
+  left: -50% !important;
+  /*transform: translate(-31%, -2%) !important;*/
+  width: 200% !important;
+  height: 90% !important;
+  z-index: 9999 !important; /* 提高z-index确保在最上层 */
+  border: none;
+  border-radius: 0;
+
+}
+
+/* 编辑器头部 */
+.editor-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  background-color: #f8f9fa;
+}
+
+.editor-header-primary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #f8f9fa;
+}
+
+.current-file-name {
+  font-weight: 500;
+  font-size: 13px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 50%;
+}
+
+.primary-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.primary-actions button,
+.editor-actions button {
+  width: 32px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  border-radius: 3px;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+}
+
+.primary-actions button:hover,
+.editor-actions button:hover {
+  background-color: #f0f0f0;
+  border-color: #bbb;
+}
+
+/* 工具栏容器 */
+.toolbar-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  flex: 1;
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 1px;
+  padding: 0 3px;
+  border-right: 1px solid #e0e0e0;
+}
+
+.toolbar-group:last-child {
+  border-right: none;
+}
+
+.toolbar-group button {
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  background-color: #fff;
+  color: #333;
+}
+
+.toolbar-group button:hover {
+  background-color: #f0f0f0;
+  border-color: #ccc;
+}
+
+.toolbar-group button.active {
+  background-color: #e0e0e0;
+  border-color: #999;
+}
+
+.toolbar-group button strong,
+.toolbar-group button em,
+.toolbar-group button u,
+.toolbar-group button mark,
+.toolbar-group button del {
+  color: inherit;
+}
+
+/* 标题选择器 */
+.heading-selector {
+  position: relative;
+  display: inline-block;
+}
+
+.heading-button {
+  padding: 6px 10px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+}
+
+.heading-button:hover {
+  background-color: #f5f5f5;
+  border-color: #bbb;
+}
+
+.heading-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  min-width: 120px;
+}
+
+.heading-option {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.heading-option:hover {
+  background-color: #f8f9fa;
+}
+
+/* 溢出菜单 */
+.toolbar-overflow {
+  position: relative;
+  margin-left: 2px;
+  flex-shrink: 0;
+  display: none;
+}
+
+.overflow-toggle {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  border-radius: 3px;
+  border: 1px solid #ddd;
+  background: #fff;
+  cursor: pointer;
+  color: #333;
+  position: relative;
+  z-index: 1001;
+}
+
+.overflow-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 1002;
+  display: none;
+  min-width: 180px;
+  padding: 6px 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.overflow-menu.visible {
+  display: block;
+}
+
+.overflow-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+}
+
+.overflow-menu button:hover {
+  background-color: #f5f5f5;
+}
+
+.markdown-editor.fullscreen .overflow-menu {
+  z-index: 10001;
+}
+
+/* 视图切换按钮 */
+.view-toggle-group {
+  margin-left: auto;
+  flex-shrink: 0;
+  border-right: none !important;
+}
+
+.view-toggle-group-primary {
+  display: flex;
+  gap: 2px;
+  margin: 0 6px;
+}
+
+.view-toggle-group button,
+.view-toggle-group-primary button {
+  width: 32px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  border-radius: 3px;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+}
+
+.view-toggle-group button.active,
+.view-toggle-group-primary button.active {
+  background-color: #e0e0e0;
+  border-color: #999;
+}
+
+.view-toggle-group button:hover,
+.view-toggle-group-primary button:hover {
+  background-color: #f0f0f0;
+  border-color: #bbb;
+}
+
+/* 编辑器内容区域 */
+.editor-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+}
+
+.split-view {
+  display: flex;
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+}
+
+.split-view.split-vertical {
+  flex-direction: row;
+}
+
+.split-view.split-horizontal {
+  flex-direction: column;
+}
+
+.split-view.split-horizontal .editor-pane {
+  max-height:30vh;
+}
+
+.split-view.split-horizontal .preview-pane {
+  /*overflow-y: auto; !* 内容过多时显示垂直滚动条 *!*/
+  /*overflow-x: hidden; !* 隐藏水平滚动条 *!*/
+  /*width: 100%;*/
+  max-height: 38vh;
+}
+.split-view.split-horizontal .editor-pane {
+  border-bottom: 1px solid #ddd;
+}
+.split-view.split-vertical .editor-pane,
+.split-view.split-vertical .preview-pane {
+  overflow-y: auto; /* 内容过多时显示垂直滚动条 */
+  overflow-x: hidden; /* 隐藏水平滚动条 */
+  /*height: 100%;*/
+  max-height: 73vh;
+  /*width: 100%;*/
+}
+/*全屏模式下修改最大高度*/
+.markdown-editor.fullscreen .preview {
+  max-height: 100vh;
+}
+.markdown-editor.fullscreen .split-view .editor-pane,
+.markdown-editor.fullscreen .split-view .preview-pane {
+  max-height: 100vh;
+}
+
+.split-view .editor-pane,
+.split-view .preview-pane {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+  /*max-height: 70vh;*/
+}
+
+.editor-pane {
+  border-right: 1px solid #eee;
+}
+
+
+
+.preview-pane {
+  overflow: auto;
+}
+
+/* 文本区域 */
+.markdown-textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 70vh;
+  padding: 14px;
+  border: none;
+  resize: none;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.split-view.split-vertical .editor-pane .markdown-textarea {
+  box-sizing: border-box;
+}
+
+
+
+.markdown-textarea:focus {
+  outline: none;
+}
+
+
+.preview {
+  padding: 14px;
+  line-height: 1.8;
+  /*height: 100%; !* 设置固定高度 *!*/
+  max-height: 73vh;
+  overflow: auto;
+}
+
+
+
+.preview-align-left {
+  text-align: left;
+}
+
+.preview h1,
+.preview h2,
+.preview h3,
+.preview h4,
+.preview h5,
+.preview h6 {
+  text-align: left;
+  margin-top: 6px;
+  margin-bottom: 4px;
+}
+
+.preview p {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.preview-pane.preview-align-left code,
+.preview code {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: #bfc7d8;
+  border-radius: 3px;
+}
+
+
+.preview pre {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #f6f8fa;
+  border-radius: 3px;
+}
+
+.preview-pane.preview-align-left blockquote,
+.preview blockquote {
+  margin: 0 0 16px;
+  padding: 10px 20px;
+  border-left: 4px solid #ddd;
+  background-color: #f8f9fa;
+  color: #6c757d;
+}
+
+.preview ul,
+.preview ol {
+  padding-left: 2em;
+  margin-bottom: 16px;
+}
+
+.preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+.preview table th,
+.preview table td {
+  padding: 6px 13px;
+  border: 1px solid #dfe2e5;
+}
+
+.preview table tr:nth-child(2n) {
+  background-color: #f6f8fa;
+}
+
+/* 对齐样式 */
+.align-left {
+  text-align: left;
+}
+
+.align-center {
+  text-align: center;
+}
+
+.align-right {
+  text-align: right;
+}
+
+/* 任务列表样式 */
+.task-list-item {
+  list-style: none;
+  margin-bottom: 1px;
+}
+
+.task-list-item input[type="checkbox"] {
+  margin-right: 8px;
+  margin-top: 1px;
+  cursor: pointer;
+}
+
+.task-completed {
+  text-decoration: line-through;
+  color: #6c757d;
+}
+
+/* 编辑器底部 */
+.editor-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-top: 1px solid #eee;
+  background-color: #f8f9fa;
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.markdown-help {
+  flex: 1;
+}
+
+.word-count {
+  white-space: nowrap;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .editor-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar {
+    order: 1;
+    margin-bottom: 8px;
+  }
+
+  .view-toggle {
+    order: 2;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+
+  .editor-actions {
+    order: 3;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+
+  .split-view {
+    flex-direction: column;
+  }
+
+  .editor-pane {
+    border-right: none;
+    border-bottom: 1px solid #eee;
+  }
+
+  .markdown-textarea {
+    min-height: 200px;
+  }
+
+  .editor-footer {
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+  }
+
+  .editor-header-primary {
+    padding: 5px 8px;
+  }
+
+  .current-file-name {
+    font-size: 12px;
+  }
+
+  .primary-actions {
+    gap: 4px;
+  }
+
+  .primary-actions button {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .editor-header-secondary {
+    padding: 4px 8px;
+  }
+
+  .toolbar-group {
+    gap: 1px;
+    padding: 0 2px;
+  }
+
+  .toolbar-group button {
+    min-width: 26px;
+    height: 26px;
+    font-size: 12px;
+  }
+
+  .overflow-toggle {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+  }
+
+  .toolbar-group:nth-child(n+4) {
+    display: none;
+  }
+
+  .toolbar-overflow {
+    display: block;
+  }
+
+  .toolbar-container:hover .toolbar-group {
+    display: flex;
+  }
+}
+
+@media (min-width: 769px) {
+  .toolbar-overflow {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .toolbar button {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+
+  .view-toggle button,
+  .editor-actions button {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  .markdown-textarea {
+    padding: 12px;
+    font-size: 13px;
+  }
+
+  .preview,
+  .editor-pane,
+  .preview-pane {
+    padding: 12px;
+  }
+}
+
+
+
+
+
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  min-width: 300px;
+}
+
+.modal-content h3 {
+  margin-top: 0;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.modal-actions button {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+
+
+.tag-list-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 300px;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow: hidden;
+}
+
+.tag-list-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.tag-list-modal .modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.tag-list-modal .modal-body {
+  padding: 8px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.tag-item {
+  color: #007bff;
+  padding: 3px 6px;
+  border-radius: 8px;
+  background: #f0f8ff;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid #d0e8ff;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.tag-item:hover {
+  background: #e1f0ff;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+
+.insert-all-button,
+.close-button {
+  color: black;
+  background: none;
+  border: 1px solid;
+  padding: 1px 2px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.insert-all-button:hover,
+.close-button:hover {
+  background-color: #f0f0f0;
+}
+

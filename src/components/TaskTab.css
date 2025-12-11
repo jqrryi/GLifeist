@@ -1,0 +1,1155 @@
+/*@media (max-width: 768px) {*/
+/*  .task-tab table {*/
+/*    font-size: 14px;*/
+/*    table-layout: fixed;*/
+/*    width: 100%;*/
+/*  }*/
+
+/*  .task-tab th,*/
+/*  .task-tab td {*/
+/*    padding: 8px 4px;*/
+/*  }*/
+
+/*  !* 移动端只显示关键列 *!*/
+/*  .task-tab th:nth-child(n+6),*/
+/*  .task-tab td:nth-child(n+6) {*/
+/*    display: none;*/
+/*  }*/
+
+/*  !* 展开按钮样式 *!*/
+/*  .expand-button {*/
+/*    background: transparent;*/
+/*    border: none;*/
+/*    color: #007bff;*/
+/*    cursor: pointer;*/
+/*    font-size: 14px;*/
+/*    padding: 4px 8px;*/
+/*    width: 30px;*/
+/*    height: 30px;*/
+/*    border-radius: 4px;*/
+/*    transition: all 0.2s ease;*/
+/*  }*/
+
+/*  .expand-button:hover {*/
+/*    background-color: rgba(0, 123, 255, 0.1);*/
+/*  }*/
+
+/*  .arrow-icon {*/
+/*    font-weight: bold;*/
+/*    transition: transform 0.2s ease;*/
+/*  }*/
+
+/*  .mobile-details {*/
+/*    text-align: left;*/
+/*    padding: 15px;*/
+/*    background-color: #f8f9fa;*/
+/*    border-top: 1px solid #dee2e6;*/
+/*    width: 100%;*/
+/*  }*/
+
+/*  .detail-row {*/
+/*    display: table-row;*/
+/*    width: 100%;*/
+/*    margin-bottom: 8px;*/
+/*  }*/
+
+/*  .detail-label {*/
+/*    display: table-cell;*/
+/*    font-weight: bold;*/
+/*    width: 80px;*/
+/*    padding-right: 10px;*/
+/*    color: #6c757d;*/
+/*    vertical-align: top;*/
+/*  }*/
+
+/*  .detail-value {*/
+/*    display: table-cell;*/
+/*    word-break: break-word;*/
+/*    line-height: 1.4;*/
+/*    vertical-align: top;*/
+/*  }*/
+
+/*  .action-buttons {*/
+/*    margin-top: 15px;*/
+/*    padding-top: 10px;*/
+/*    border-top: 1px solid #dee2e6;*/
+/*    text-align: right;*/
+/*  }*/
+
+/*  .action-buttons button {*/
+/*    margin-left: 10px;*/
+/*    padding: 6px 12px;*/
+/*  }*/
+
+  /* 移动端筛选器换行 */
+  .mobile-filters-wrapper {
+    display: flex;
+    font-size: 9px;
+    flex-wrap: wrap;
+    gap: 1px;
+    margin-top: 1px;
+  }
+
+  .mobile-filters-wrapper select {
+    /*flex: 1 1 calc(50% - 5px);*/
+    min-width: 10px;
+    max-width: 80px;
+  }
+
+/*  !* 隐藏PC端的字段管理器 *!*/
+/*  .field-manager {*/
+/*    display: none;*/
+/*  }*/
+/*}*/
+
+/*@media (max-width: 480px) {*/
+/*  .mobile-filters-wrapper select {*/
+/*    flex: 1 1 100%;*/
+/*  }*/
+/*}*/
+
+
+
+
+.calendar-day {
+  position: relative;
+  padding-top: 20px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.day-number {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  font-size: 14px;
+  color: #666;
+  font-weight: bold;
+}
+
+.view-stats-toggle {
+  display:flex;
+  justify-content: center;
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px;
+  border-radius: 3px;
+  color: #666;
+}
+.day-actions {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+}
+
+.log-icon-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px;
+  border-radius: 3px;
+  color: #666;
+}
+
+.log-icon-button:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.completed-tasks-count {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  background-color: #4CAF50;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.daily-log-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1000;
+}
+
+.daily-log-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/*.daily-log-content {*/
+/*  position: absolute;*/
+/*  top: 50%;*/
+/*  left: 50%;*/
+/*  transform: translate(-50%, -50%);*/
+/*  background: white;*/
+/*  border-radius: 8px;*/
+/*  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);*/
+/*  width: 90%;*/
+/*  max-width: 800px;*/
+/*  max-height: 90vh;*/
+/*  overflow-y: auto;*/
+/*  display: flex;*/
+/*  flex-direction: column;*/
+/*}*/
+
+.daily-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.daily-log-header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.close-button {
+  background: #f0f0f0;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  /*color: #999;*/
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-button:hover {
+  background: #027cff;
+  color: #333;
+}
+
+.maximize-button {
+  background: None;
+  color: #000000;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.maximize-button:hover {
+  background: #027cff;
+  color: #000000;
+}
+
+.daily-log-body {
+  padding: 20px;
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.log-section {
+  margin-bottom: 30px;
+}
+
+.log-section h3 {
+  color: #333;
+}
+
+.stats-summary ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.stats-summary li {
+  padding: 5px 0;
+}
+
+.task-item {
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.task-item h4 {
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
+.task-meta {
+  display: flex;
+  gap: 15px;
+  font-size: 14px;
+  color: #666;
+}
+
+/* Markdown Editor Styles */
+.markdown-editor {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+}
+
+.view-toggle button {
+  background: none;
+  border: 1px solid #ddd;
+  padding: 5px 10px;
+  margin-right: 5px;
+  cursor: pointer;
+}
+
+.view-toggle button.active {
+  background-color: #007bff;
+  color: white;
+}
+
+.editor-actions button {
+  margin-left: 10px;
+  padding: 5px 15px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+}
+
+.editor-content {
+  min-height: 200px;
+}
+
+.editor-textarea {
+  width: 100%;
+  min-height: 200px;
+  padding: 15px;
+  border: none;
+  resize: vertical;
+  font-family: monospace;
+}
+
+.preview {
+  padding: 15px;
+  min-height: 200px;
+  background-color: #fafafa;
+}
+
+.editor-footer {
+  padding: 10px;
+  border-top: 1px solid #ddd;
+  background-color: #f9f9f9;
+}
+
+.markdown-help small {
+  color: #666;
+}
+
+/* 今日高亮样式 */
+.calendar-day.today {
+  background-color: #e3f2fd;
+}
+
+.calendar-day.today .day-number {
+  color: #06243e;
+  font-weight: bold;
+}
+.daily-log-content .stats-summary.compact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.daily-log-content .stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.daily-log-content .stat-label {
+  font-weight: bold;
+  min-width: 80px;
+}
+
+.daily-log-content .stat-value {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.daily-log-content .credit-item,
+.daily-log-content {
+  background-color: #f0f0f0;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.daily-log-content .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+
+
+
+.daily-log-content .task-name-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.daily-log-content .task-name-item {
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.daily-log-content .task-name-item:last-child {
+  border-bottom: none;
+}
+
+.daily-log-content .section-header.centered {
+  text-align: center;
+  display: flex;
+  justify-content: center;
+}
+
+.daily-log-content .section-header.centered h3 {
+  margin: 0;
+}
+
+
+.daily-log-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+}
+
+.daily-log-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.daily-log-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+  width: 80vw;
+  max-width: 900px;
+}
+
+.daily-log-content.maximized {
+  top: 0;
+  left: 0;
+  transform: none;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+}
+
+.daily-log-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .daily-log-content {
+    width: 95vw;
+    height: 85vh;
+  }
+
+  .daily-log-content.maximized {
+    width: 100vw;
+    height: 100vh;
+  }
+}
+
+.daily-log-editor {
+  height: 60vh;
+}
+
+
+
+.daily-log-editor.fullscreen {
+  height: 100vh;
+}
+
+/* 调整编辑器头部按钮顺序 */
+.daily-log-editor .editor-header-primary .primary-actions {
+  display: flex;
+  flex-direction: row;
+}
+
+.daily-log-editor .editor-header-primary .primary-actions button:last-child {
+  margin-left: auto;
+}
+
+/* 替换之前添加的CSS样式为以下内容 */
+.board-item-group-actions {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  z-index: 10;
+}
+
+.group-change-button {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.group-change-button:hover {
+  background: rgba(240, 240, 240, 0.95);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+.group-change-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.group-change-option {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.group-change-option:hover {
+  background-color: #f5f5f5 !important;
+}
+
+.group-change-option:hover .colored-tag {
+  /* 确保标签颜色在悬停时不会改变 */
+  filter: brightness(0.95);
+}
+
+
+
+.stat-item {
+  display: flex;
+  text-align: left;
+  align-items: center;
+  /*background-color: #f0f0f0;*/
+  padding: 1px 2px;
+  font-size: 12px;
+}
+
+
+
+.month-stats {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.month-stats .stats-header {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.month-stats .stats-title {
+  text-align: center;
+  flex: 1;
+}
+
+.month-stats .stats-content {
+  text-align: center;
+  width: 100%;
+}
+
+.month-stats .stats-items {
+  text-align: center;
+  width: 100%;
+}
+
+.month-stats .stat-item {
+  justify-content: center;
+}
+
+
+.week-stats {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.week-stats .stats-header {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.week-stats .stats-title {
+  text-align: center;
+  flex: 1;
+}
+
+.week-stats .stats-items {
+  text-align: center;
+  width: 100%;
+}
+
+.week-stats .stat-item {
+  justify-content: center;
+}
+
+
+/*!* 横向滚动容器 *!*/
+/*.calendar-scroll-container {*/
+/*  overflow-x: auto;*/
+/*  overflow-y: hidden;*/
+/*  white-space: nowrap;*/
+/*  width: 100%;*/
+/*  -webkit-overflow-scrolling: touch; !* iOS 平滑滚动 *!*/
+/*}*/
+
+/*.calendar-scroll-wrapper {*/
+/*  display: inline-block;*/
+/*  min-width: 100%;*/
+/*}*/
+
+/*!* 日历网格横向布局 *!*/
+/*.calendar-grid.horizontal-scroll {*/
+/*  display: grid;*/
+/*  grid-template-columns: repeat(8, minmax(100px, 1fr));*/
+/*  min-width: 800px; !* 确保有足够的宽度 *!*/
+/*}*/
+
+/*!* 移动端优化 *!*/
+/*@media (max-width: 768px) {*/
+/*  .calendar-grid.horizontal-scroll {*/
+/*    grid-template-columns: repeat(8, minmax(80px, 1fr));*/
+/*    min-width: 640px;*/
+/*  }*/
+
+/*  .calendar-day {*/
+/*    padding: 2px;*/
+/*    min-height: 60px;*/
+/*  }*/
+
+/*  .day-number {*/
+/*    font-size: 12px;*/
+/*  }*/
+
+/*  .task-count {*/
+/*    font-size: 10px;*/
+/*  }*/
+/*}*/
+
+/*!* 滚动指示器 *!*/
+/*.scroll-indicator {*/
+/*  position: sticky;*/
+/*  top: 0;*/
+/*  background: #f5f5f5;*/
+/*  padding: 8px;*/
+/*  z-index: 10;*/
+/*  border-bottom: 1px solid #ddd;*/
+/*  display: flex;*/
+/*  justify-content: space-between;*/
+/*  align-items: center;*/
+/*}*/
+
+/*.week-navigation button {*/
+/*  background: #007bff;*/
+/*  color: white;*/
+/*  border: none;*/
+/*  padding: 5px 10px;*/
+/*  border-radius: 4px;*/
+/*  cursor: pointer;*/
+/*}*/
+
+/*.week-navigation button:disabled {*/
+/*  background: #ccc;*/
+/*  cursor: not-allowed;*/
+/*}*/
+
+/*.current-week-indicator {*/
+/*  text-align: center;*/
+/*  font-weight: bold;*/
+/*  flex: 1;*/
+/*}*/
+
+
+/* 修改聚焦列样式以支持向左展开 */
+@media (max-width: 768px) {
+  .calendar-view {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 80px);
+    min-width: 560px;
+  }
+
+  .calendar-grid.with-stats {
+    grid-template-columns: repeat(7, 80px) 120px;
+    min-width: 680px;
+  }
+
+  .calendar-week-header,
+  .calendar-week {
+    display: contents;
+  }
+
+  .calendar-day-header,
+  .calendar-day {
+    min-width: 80px;
+    width: 80px;
+    padding: 5px;
+    font-size: 12px;
+  }
+
+  .calendar-day {
+    min-height: 80px;
+  }
+
+  .day-number {
+    font-size: 12px;
+  }
+
+  /* 聚焦列适配 - 支持向左和向右展开 */
+  .calendar-day-header.focused,
+  .calendar-day.focused,
+  .calendar-day.stats-cell.focused {
+    width: 50vw;
+    min-width: 50vw;
+    background-color: #d4edda;
+    border: 2px solid #28a745;
+    box-sizing: border-box;
+    z-index:10;
+    position: relative;
+  }
+
+  /* 向左展开的样式 */
+  .calendar-day-header.focused[style*="transform"],
+  .calendar-day.focused[style*="transform"],
+  .calendar-day.stats-cell.focused[style*="transform"] {
+    transform: translateX(-100%);
+  }
+
+  /* 统计列适配 */
+  .stats-cell {
+    min-width: 120px;
+    width: 120px;
+  }
+
+  /* 修复折叠列样式 */
+  .calendar-day-header.collapsed,
+  .calendar-day.collapsed,
+  .calendar-day.stats-cell.collapsed {
+    opacity: 0.3;
+    transform: scale(0.95);
+  }
+}
+
+/* 确保聚焦列的过渡效果 */
+.calendar-day,
+.calendar-day-header,
+.calendar-day.stats-cell {
+  transition: width 0.3s ease, min-width 0.3s ease, opacity 0.2s ease, transform 0.3s ease;
+}
+
+.calendar-day-header.focused.left-expansion,
+.calendar-day.focused.left-expansion,
+.calendar-day.stats-cell.focused.left-expansion {
+  margin-left: -50vw;
+  transform: translateX(100%);
+  z-index: 100;
+}
+
+/* 确保聚焦列内容可见 */
+.calendar-grid {
+  overflow: visible;
+}
+
+.calendar-scroll-wrapper {
+  overflow: visible;
+}
+
+.log-file-icon {
+  margin-left: 4px;
+  color: #007bff;
+}
+
+
+
+/* 添加搜索框样式 */
+.task-search-container {
+  margin-right: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.task-search-input {
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  min-width: 200px;
+  height: 22px;
+}
+
+.task-search-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .task-search-container {
+    margin-right: 1px;
+  }
+
+  .task-search-input {
+    min-width: 100px;
+    font-size: 12px;
+    padding: 2px 4px;
+  }
+}
+
+
+
+
+
+.task-search-container,
+.task-system-search-container {
+  position: relative;
+  display: inline-block;
+}
+
+.clear-search-button {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-65%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  color: #666;
+}
+
+.clear-search-button:hover {
+  background:none;
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+
+.calendar-header button {
+  background: none;
+  color: black
+}
+
+.calendar-header button:hover {
+  background: #2F455B0C;
+  color: black
+}
+
+
+
+
+
+
+
+.main-action-button-group-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.main-action-button-group-container {
+  position: relative;
+  background: white;
+  padding: 1px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.close-main-actions-button {
+  position: absolute;
+  top: 10px;
+  right: 5px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.close-main-actions-button:hover {
+  color: #333;
+}
+
+
+
+.enhanced-select-all {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.select-all-main {
+  display: flex;
+  align-items: center;
+  gap:1px;
+}
+
+.selection-count {
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+}
+
+.selection-count .total-count {
+  color: #999;
+}
+
+.select-all-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-toggle {
+  background: none;
+  border: none;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 1px;
+  color: #666;
+}
+
+.dropdown-toggle:hover {
+  color: #333;
+  background-color: #f0f0f0;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 1px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  z-index: 1000;
+  min-width: 120px;
+  display: none;
+}
+
+.select-all-dropdown:hover .dropdown-menu {
+  display: block;
+}
+
+.dropdown-menu button {
+  display: block;
+  color: black;
+  width: 100%;
+  text-align: left;
+  padding: 1px 1px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.dropdown-menu button:hover {
+  background-color: #f5f5f5;
+}
+
+
+
+
+
+
+
+
+/* 日历任务卡片样式 */
+.calendar-task-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  min-height: 32px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.calendar-task-card:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.calendar-task-card .task-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  margin-right: 5px;
+  font-weight: bold;
+}
+
+/* 日历视图中的操作按钮菜单 */
+.calendar-view-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  z-index: 9999 !important;
+  padding: 2px;
+  min-width: 150px;
+}
+
+.calendar-view-menu .action-button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-start;
+}
+
+
+
+.calendar-view-menu .action-button {
+  flex: 0 0 auto;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.calendar-view-menu .action-button:hover {
+  background: #e0e0e0;
+}
+
+.calendar-view-menu .action-button img {
+  width: 16px;
+  height: 16px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .calendar-task-card {
+    padding: 3px 6px;
+    min-height: 28px;
+  }
+
+  .calendar-task-card .task-name {
+    font-size: 13px;
+  }
+
+  .calendar-view-menu {
+    padding: 6px;
+    min-width: 120px;
+    z-index: 9999;
+  }
+
+  .calendar-view-menu .action-button {
+    min-width: 26px;
+    height: 26px;
+  }
+
+  .calendar-view-menu .action-button img {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+
+
+.reset-filters-btn {
+  color: #666;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 1px 1px;
+
+}
+
+.reset-filters-btn:hover {
+  background: #ddd;
+}

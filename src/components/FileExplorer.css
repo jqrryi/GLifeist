@@ -1,0 +1,923 @@
+/* src/components/FileExplorer.css */
+.file-explorer {
+  width: 250px;
+  height: 100%;
+  border-right: 1px solid #ddd;
+  /*background-color: #f8f9fa;*/
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  transition: width 0.3s ease;
+}
+
+.file-explorer.collapsed {
+  width: 30px;
+}
+
+.explorer-header {
+  padding: 18px 16px;
+  height: 28px;
+  border-bottom: 1px solid #ddd;
+  background-color: #f8f9fa;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.explorer-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/*.collapse-btn {*/
+/*  background: none;*/
+/*  border: none;*/
+/*  font-size: 16px;*/
+/*  cursor: pointer;*/
+/*  padding: 0;*/
+/*  width: 20px;*/
+/*  height: 20px;*/
+/*  display: flex;*/
+/*  align-items: center;*/
+/*  justify-content: center;*/
+/*  border-radius: 3px;*/
+/*  color: #333; !* 修改颜色使其可见 *!*/
+/*}*/
+
+/*.collapse-btn:hover {*/
+/*  background-color: #e9ecef;*/
+/*}*/
+
+/*.search-box {*/
+/*  padding: 8px 16px;*/
+/*}*/
+
+.search-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.explorer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.file-node {
+  user-select: none;
+}
+
+.node-content {
+  display: flex;
+  align-items: center;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  position: relative;
+}
+
+.node-content:hover {
+  background-color: #e9ecef;
+}
+
+.node-content.active {
+  background-color: #007bff;
+  color: white;
+}
+
+.node-content.folder {
+  font-weight: 500;
+}
+
+.toggle {
+  margin-right: 6px;
+  cursor: pointer;
+  width: 16px;
+  text-align: center;
+}
+
+.icon {
+  margin-right: 6px;
+}
+
+.node-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rename-input {
+  flex: 1;
+  padding: 2px 4px;
+  border: 1px solid #007bff;
+  border-radius: 3px;
+  font-size: 14px;
+  outline: none;
+}
+
+.empty-state {
+  padding: 16px;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* 上下文菜单样式 */
+.context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  z-index: 1000;
+  min-width: 150px;
+}
+
+.menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.menu-item:hover {
+  background-color: #f8f9fa;
+}
+
+.divider {
+  height: 1px;
+  background-color: #ddd;
+  margin: 4px 0;
+}
+
+/* 弹窗样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+}
+
+.modal {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  min-width: 300px;
+  max-width: 500px;
+}
+
+.modal-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.modal-body {
+  padding: 24px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}
+
+.file-explorer {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+}
+
+.collapse-btn {
+  width: 12px;
+  min-width: 12px;
+  height: 100%;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  border-right: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.collapse-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.explorer-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.explorer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.search-box {
+  padding: 10px;
+}
+
+.explorer-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+
+.file-explorer {
+  display: flex;
+  flex-direction: row;
+  height: 85vh;
+  transition: all 0.3s ease;
+}
+
+.file-explorer.collapsed {
+  width: 12px !important;
+}
+
+.file-explorer.collapsed .explorer-main {
+  display: none;
+}
+
+.collapse-btn {
+  width: 12px;
+  min-width: 12px;
+  height: 100%;
+  color: #333;
+  background-color: #ffffff;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  border-right: 1px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.collapse-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.explorer-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: 100%;
+}
+
+
+/* 在 FileExplorer.css 中添加以下样式 */
+
+
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+
+
+
+
+
+/* 添加多选状态的视觉样式 */
+.node-content.selected {
+  background-color: #e3f2fd;
+  position: relative;
+}
+
+.node-content.selected::before {
+  content: "✓";
+  position: absolute;
+  left: 5px;
+  color: #1976d2;
+  font-weight: bold;
+}
+
+/* 确保选中状态在不同主题下都可见 */
+.node-content.selected.active {
+  background-color: #bbdefb;
+}
+
+
+.load-more-files {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.load-more-files:hover {
+  background-color: #f5f5f5;
+}
+
+.load-more-files .icon {
+  font-size: 16px;
+}
+
+
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 1px 0;
+  font-size: 12px;
+}
+
+.pagination-controls button {
+  padding: 1px 2px;
+  background: none;
+  border-radius: 3px;
+  cursor: pointer;
+  color: #5a6268;
+}
+
+.pagination-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-controls .page-input {
+  width: 50px;
+  padding: 1px;
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+.pagination-controls .page-info {
+  margin: 0 2px;
+}
+
+.context-menu .submenu {
+  position: relative;
+}
+
+.context-menu .submenu:hover .submenu-content {
+  display: block;
+}
+
+.context-menu .submenu-content {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  z-index: 1000;
+  min-width: 120px;
+}
+
+.context-menu .submenu-content .menu-item {
+  padding: 8px 12px;
+}
+
+.context-menu .submenu-content .menu-item:hover {
+  background-color: #f0f0f0;
+}
+
+
+.move-to-modal {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 400px;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.move-to-modal .modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.move-to-modal .modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.move-to-modal .source-info {
+  margin-bottom: 20px;
+}
+
+.move-to-modal .source-info ul {
+  max-height: 100px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.move-to-modal .folder-selector {
+  margin-top: 10px;
+}
+
+.move-to-modal .folder-tree {
+  border: 1px solid #eee;
+  border-radius: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.folder-item {
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.folder-item:hover {
+  background-color: #f5f5f5;
+}
+
+.folder-item.selected {
+  background-color: #e3f2fd;
+}
+
+.folder-item .icon {
+  flex: 0 0 auto;
+}
+
+.folder-item .folder-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.move-to-modal .modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+
+
+
+
+.move-to-modal .expand-toggle {
+  width: 20px;
+  display: inline-block;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  margin-right: 5px;
+  font-weight: bold;
+}
+
+.move-to-modal .folder-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.move-to-modal .folder-item:hover {
+  background-color: #f5f5f5;
+}
+
+.move-to-modal .folder-item.selected {
+  background-color: #e3f2fd;
+}
+
+.move-to-modal .folder-item .icon {
+  flex: 0 0 auto;
+  margin: 0 8px;
+}
+
+.move-to-modal .folder-item .folder-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.move-to-modal .folder-children {
+  margin-left: 20px;
+}
+
+
+
+
+
+
+
+
+
+
+/* 在 FileExplorer.css 中添加或修改以下样式 */
+.image-viewer-modal {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 80vw;
+  height: 70vh;
+  max-width: 800px;
+  max-height: 480px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .image-viewer-modal {
+    width: 95vw;
+    height: 95vh;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  .image-viewer-header h3 {
+    font-size: 16px;
+    max-width: 60%;
+  }
+
+  .image-viewer-controls {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .nav-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .zoom-controls {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.image-viewer-modal:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+}
+
+.image-viewer-modal:-moz-full-screen {
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+}
+
+.image-viewer-modal:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+}
+
+.image-viewer-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.image-viewer-header h3 {
+  margin: 0;
+  font-size: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70%;
+}
+
+.image-viewer-header-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.delete-button,
+.fullscreen-button,
+.close-button {
+  color: black;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.delete-button:hover,
+.fullscreen-button:hover,
+.close-button:hover {
+  background-color: #f5f5f5;
+}
+
+.image-viewer-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.image-viewer-content:active {
+  cursor: grabbing;
+}
+
+.image-viewer-content img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: transform 0.2s ease;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.image-viewer-controls {
+  padding: 16px 20px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.nav-button {
+  color:black;
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.nav-button:hover:not(:disabled) {
+  background: #f5f5f5;
+}
+
+.nav-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.zoom-controls button {
+  color: black;
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.zoom-controls button:hover {
+  background: #f5f5f5;
+}
+
+.zoom-controls span {
+  min-width: 50px;
+  text-align: center;
+}
+
+
+
+
+
+
+
+/* 在 FileExplorer.css 中添加搜索相关样式 */
+.search-box {
+  position: relative;
+  padding: 10px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.search-loading {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+  font-size: 12px;
+}
+
+.search-results {
+  border-top: 1px solid #eee;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.search-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #eee;
+}
+
+.search-results-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: normal;
+}
+
+.close-search-results {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+
+.close-search-results:hover {
+  background-color: #e0e0e0;
+}
+
+.search-result-item {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.search-result-file {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  background-color: #fafafa;
+}
+
+.search-result-file:hover {
+  background-color: #f0f0f0;
+}
+
+.search-result-file .icon {
+  margin-right: 8px;
+}
+
+.search-result-file .file-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.search-result-file .match-count {
+  font-size: 12px;
+  color: #666;
+}
+
+.search-result-matches {
+  padding: 0 12px 8px;
+}
+
+.match-item {
+  padding: 6px 10px;
+  margin: 4px 0;
+  background-color: #fff;
+  border: 1px solid #eee;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.match-item:hover {
+  background-color: #f5f9ff;
+  border-color: #d0e0ff;
+}
+
+.match-context {
+  display: block;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+.match-position {
+  display: block;
+  font-size: 11px;
+  color: #888;
+}
+
+.explorer-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+
+
+
+

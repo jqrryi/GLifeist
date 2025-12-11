@@ -1,0 +1,26 @@
+# 使用官方 Node 运行时作为基础镜像
+FROM node:24-alpine
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制 package.json 和 package-lock.json（如果存在）
+COPY package*.json ./
+
+# 安装依赖
+RUN npm install
+
+# 复制其余源代码
+COPY . .
+
+# 构建生产版本
+RUN npm run build
+
+# 使用轻量级 HTTP 服务器 serve 来托管构建好的静态文件
+RUN npm install -g serve
+
+# 暴露端口
+EXPOSE 3300
+
+# 启动应用
+CMD ["serve", "-s", "build", "-l", "3300"]
