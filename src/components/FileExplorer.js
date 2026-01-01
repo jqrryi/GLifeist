@@ -1,9 +1,10 @@
 // src/components/FileExplorer.js
 import React, { useState, useEffect, useRef } from 'react';
 import TagIndexManager from '../utils/TagIndexManager';
+import ImageReferenceIndexManager from '../utils/ImageReferenceIndexManager';
 import './FileExplorer.css';
 import CONFIG from '../config';
-
+import userDataManager from "../utils/userDataManager";
 
 // 创建标签索引管理器实例
 const tagIndexManager = new TagIndexManager();
@@ -23,7 +24,8 @@ const ImageViewerModal = ({
   imagePosition,
   setImagePosition,
   onDelete,
-  onFileSelect
+  onFileSelect,
+  onImageSearch
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -156,8 +158,22 @@ const ImageViewerModal = ({
     <div className="modal-overlay" onClick={handleClose}>
       <div className="image-viewer-modal" onClick={e => e.stopPropagation()}>
         <div className="image-viewer-header">
-          <h3>{selectedImage.name}</h3>
+          <h3
+            className="image-title clickable"
+
+            onClick={() => {
+              if(onImageSearch) {
+                const imageName = selectedImage.name;
+                onImageSearch(imageName);
+                // 关闭图片查看器
+                onClose();
+              }
+            }}
+          >
+            {selectedImage.name}
+          </h3>
           <div className="image-viewer-header-buttons">
+
             {onDelete && (
               <button
                 className="delete-button"
@@ -167,8 +183,8 @@ const ImageViewerModal = ({
                 🗑
               </button>
             )}
-            <button className="fullscreen-button" onClick={handleToggleFullscreen}>↕</button>
-            <button className="close-button" onClick={handleClose}>×</button>
+            <button className="fullscreen-button" onClick={handleToggleFullscreen} title="全屏/还原">⛶</button>
+            <button className="close-button" onClick={handleClose} title="关闭">×</button>
           </div>
         </div>
 
@@ -233,7 +249,8 @@ const FileExplorer = ({
   collapsed,
   onToggleCollapse,
   apiBaseUrl = `${CONFIG.API_BASE_URL}/api/files`, // 默认API基础路径
-  autoLoadLastFile = true // 新增属性，控制是否自动加载上次打开的文件
+  autoLoadLastFile = true, // 新增属性，控制是否自动加载上次打开的文件
+  imageReferenceIndexManager
 }) => {
   const [fileTree, setFileTree] = useState([]);
   const [expandedFolders, setExpandedFolders] = useState(new Set(['root']));
@@ -266,9 +283,10 @@ const FileExplorer = ({
 
   const [filePagination, setFilePagination] = useState(() => {
     try {
-      const savedSettings = localStorage.getItem('filePaginationSettings');
+      // const savedSettings = localStorage.getItem('filePaginationSettings');
+      const savedSettings = userDataManager.getUserData('filePaginationSettings');
       if (savedSettings) {
-        const parsed = JSON.parse(savedSettings);
+        const parsed = savedSettings;
         if (parsed && typeof parsed === 'object') {
           // 确保 global 属性存在
           if (!parsed.global) {
@@ -293,9 +311,10 @@ const FileExplorer = ({
   });
   const [sortSettings, setSortSettings] = useState(() => {
     try {
-      const savedSettings = localStorage.getItem('fileSortSettings');
+      // const savedSettings = localStorage.getItem('fileSortSettings');
+      const savedSettings = userDataManager.getUserData('fileSortSettings');
       if (savedSettings) {
-        return JSON.parse(savedSettings);
+        return savedSettings;
       }
     } catch (e) {
       console.error('加载排序设置失败:', e);
@@ -396,50 +415,72 @@ const FileExplorer = ({
 
   // 默认文件树结构
   const getDefaultFileTree = () => {
+    console.log('使用默认文件树结构...')
     const tree = [
       {
         id: 'root',
-        name: '根目录',
+        name: '备忘录',
         type: 'folder',
         children: [
-          {
-            id: 'notes',
-            name: '笔记簿',
-            type: 'folder',
-            children: [
-              {
-                id: 'welcome',
-                name: '欢迎使用.md',
-                type: 'file',
-                content: '# 欢迎使用笔记簿\n\n这是一个功能强大的 Markdown 编辑器，支持以下功能：\n\n- 实时预览\n- 任务列表\n- 代码高亮\n- 文件管理\n\n开始创建您的第一个文档吧！',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-              }
-            ],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          },
-          {
-            id: 'images',
-            name: '图片',
-            type: 'folder',
-            children: [], // 图片文件将动态加载到这里
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }
         ],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }
     ];
-    // console.log('生成默认文件树:', tree);
+
+    // 创建默认欢迎文件
+    createDefaultWelcomeFile();
+
     return tree;
+  };
+
+  // 创建默认欢迎文件的实际函数
+  const createDefaultWelcomeFile = async () => {
+    console.log('创建默认欢迎文件...')
+    try {
+      // 检查欢迎文件是否已存在
+      const checkResponse = await fetch(`${apiBaseUrl}/welcome`, {
+        method: 'GET'
+      });
+
+      // 如果文件不存在，则创建
+      if (!checkResponse.ok) {
+        const welcomeFileData = {
+          parentId: 'notes',
+          name: '欢迎使用.md',
+          type: 'file',
+          content: '# 欢迎使用笔记簿\n\n这是一个功能强大的 Markdown 编辑器，支持以下功能：\n\n- 实时预览\n- 任务列表\n- 代码高亮\n- 文件管理\n\n开始创建您的第一个文档吧！'
+        };
+
+        const response = await fetch(`${apiBaseUrl}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(welcomeFileData)
+        });
+
+        if (response.ok) {
+          console.log('创建默认欢迎文件成功');
+          // 重新加载文件树以包含新创建的欢迎文件
+          await loadFileTree();
+        } else {
+          console.error('创建默认欢迎文件失败:', response.status);
+        }
+      } else {
+        console.log('默认欢迎文件已存在');
+      }
+    } catch (error) {
+      console.error('检查或创建默认欢迎文件时出错:', error);
+    }
   };
 
   const getLastOpenedFile = () => {
     try {
-      const savedFile = localStorage.getItem('lastOpenedFile');
-      return savedFile ? JSON.parse(savedFile) : null;
+      // const savedFile = localStorage.getItem('lastOpenedFile');
+      const savedFile = userDataManager.getUserData('lastOpenedFile');
+      // return savedFile ? JSON.parse(savedFile) : null;
+      return savedFile ? savedFile : null;
     } catch (e) {
       console.error('解析上次打开的文件信息失败:', e);
       return null;
@@ -448,7 +489,9 @@ const FileExplorer = ({
 
   const saveLastOpenedFile = (file) => {
     try {
-      localStorage.setItem('lastOpenedFile', JSON.stringify(file));
+      // localStorage.setItem('lastOpenedFile', JSON.stringify(file));
+      userDataManager.setUserData('lastOpenedFile', file);
+
     } catch (e) {
       console.error('保存文件信息失败:', e);
     }
@@ -456,7 +499,8 @@ const FileExplorer = ({
 
   const clearLastOpenedFile = () => {
     try {
-      localStorage.removeItem('lastOpenedFile');
+      // localStorage.removeItem('lastOpenedFile');
+      userDataManager.clearUserData('lastOpenedFile');
     } catch (e) {
       console.error('清除文件信息失败:', e);
     }
@@ -526,6 +570,19 @@ const FileExplorer = ({
           return;
         }
 
+        // 新增：关闭移动到模态框
+        if (moveToModalOpen) {
+          setMoveToModalOpen(false);
+          setMoveToSourceNodes([]);
+          setMoveToTargetFolder(null);
+          return;
+        }
+
+        // 新增：关闭上下文菜单
+        if (contextMenu.visible) {
+          setContextMenu({ visible: false, x: 0, y: 0, node: null });
+          return;
+        }
         // 检查其他模态框状态（如果有）
         // 这里可以根据实际的模态框状态进行扩展
 
@@ -558,7 +615,7 @@ const FileExplorer = ({
     return () => {
       document.removeEventListener('keydown', handleEscKey);
     };
-  }, [imageViewerOpen, searchResults, searchTerm]);
+  }, [imageViewerOpen, moveToModalOpen, contextMenu, searchResults, searchTerm]);
 
   // 在 FileExplorer.js 中添加键盘事件处理
   useEffect(() => {
@@ -673,10 +730,10 @@ const FileExplorer = ({
           }
 
           try {
-            console.log('开始验证文件是否存在:', `${apiBaseUrl}/${lastFile.id}`);
+            // console.log('开始验证文件是否存在:', `${apiBaseUrl}/${lastFile.id}`);
             const response = await fetch(`${apiBaseUrl}/${lastFile.id}`);
             if (response.ok) {
-              console.log('文件存在，执行自动加载:', lastFile.id);
+              // console.log('文件存在，执行自动加载:', lastFile.id);
               onFileSelect(lastFile);
             } else {
               console.log('文件不存在，清除记录');
@@ -824,9 +881,10 @@ const FileExplorer = ({
     // 从 localStorage 加载分页设置
     const loadPaginationSettings = () => {
       try {
-        const savedSettings = localStorage.getItem('filePaginationSettings');
+        // const savedSettings = localStorage.getItem('filePaginationSettings');
+        const savedSettings = userDataManager.getUserData('filePaginationSettings');
         if (savedSettings) {
-          setFilePagination(JSON.parse(savedSettings));
+          setFilePagination(savedSettings);
         }
       } catch (e) {
         console.error('加载分页设置失败:', e);
@@ -837,14 +895,24 @@ const FileExplorer = ({
   }, []);
 
 
-  // useEffect(() => {
-  //   console.log('=== FileExplorer 状态调试 ===');
-  //   console.log('currentFileId:', currentFileId);
-  //   console.log('isLoadingFromSearch:', isLoadingFromSearch);
-  //   console.log('searchLoadedFileId:', searchLoadedFileId);
-  //   console.log('autoLoadLastFile:', autoLoadLastFile);
-  // }, [currentFileId, isLoadingFromSearch, searchLoadedFileId, autoLoadLastFile]);
+  useEffect(() => {
+    const handleRefreshFileExplorer = async () => {
+      try {
+        await loadFileTree(); // 调用现有的文件树加载函数
+        // await loadImages();   // 同时刷新图片列表
+      } catch (error) {
+        console.error('刷新文件树失败:', error);
+      }
+    };
 
+    // 添加事件监听器
+    window.addEventListener('refreshFileExplorer', handleRefreshFileExplorer);
+
+    // 清理函数
+    return () => {
+      window.removeEventListener('refreshFileExplorer', handleRefreshFileExplorer);
+    };
+  }, []);
 
   useEffect(() => {
     const handleTagSearchRequest = (event) => {
@@ -888,9 +956,77 @@ const FileExplorer = ({
     }
   }, [currentFileId, searchLoadedFileId]);
 
+  useEffect(() => {
+    // 初始化时构建图片引用索引
+    const buildImageReferenceIndex = async () => {
+      try {
+        // 处理普通文件
+        const allFiles = getAllFilesFromTree(fileTree);
+
+        for (const file of allFiles) {
+          if (file.type === 'file' && file.id) {
+            try {
+              // 获取文件内容
+              const response = await fetch(`${CONFIG.API_BASE_URL}/api/files/${file.id}`);
+              if (response.ok) {
+                const data = await response.json();
+                const fileModifiedTime = file.updatedAt || new Date().toISOString();
+                imageReferenceIndexManager.updateFileIndex(file.id, file.name, data.content, fileModifiedTime);
+              }
+            } catch (error) {
+              console.warn(`无法获取文件内容用于索引构建: ${file.name}`, error);
+            }
+          }
+        }
+
+        // 处理手账文件
+        for (const journal of journalFiles) {
+          try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/api/files/journal/${journal.name}`);
+            if (response.ok) {
+              const data = await response.json();
+              const fileId = `journal_${journal.name}`;
+              const fileModifiedTime = journal.updatedAt || new Date().toISOString();
+              imageReferenceIndexManager.updateFileIndex(fileId, journal.name, data.content, fileModifiedTime);
+            }
+          } catch (error) {
+            console.warn(`无法获取手账文件内容用于索引构建: ${journal.name}`, error);
+          }
+        }
+      } catch (error) {
+        console.error('构建图片引用索引时出错:', error);
+      }
+    };
+
+    if (fileTree.length > 0 && journalFiles.length > 0) {
+      buildImageReferenceIndex();
+    }
+  }, [fileTree, journalFiles]);
+
+  // 辅助函数：从文件树中获取所有文件
+  const getAllFilesFromTree = (tree) => {
+    const files = [];
+
+    const traverse = (nodes) => {
+      nodes.forEach(node => {
+        if (node.type === 'file') {
+          files.push(node);
+        }
+        if (node.children) {
+          traverse(node.children);
+        }
+      });
+    };
+
+    traverse(tree);
+    return files;
+  };
+
   const saveExpandedFolders = (folders) => {
     try {
-      localStorage.setItem('expandedFolders', JSON.stringify(Array.from(folders)));
+      // localStorage.setItem('expandedFolders', JSON.stringify(Array.from(folders)));
+      userDataManager.setUserData('expandedFolders', Array.from(folders));
+
     } catch (e) {
       console.error('保存展开文件夹状态失败:', e);
     }
@@ -898,8 +1034,9 @@ const FileExplorer = ({
 
   const loadExpandedFolders = () => {
     try {
-      const saved = localStorage.getItem('expandedFolders');
-      return saved ? new Set(JSON.parse(saved)) : new Set(['root']);
+      // const saved = localStorage.getItem('expandedFolders');
+      const saved = userDataManager.getUserData('expandedFolders');
+      return saved ? new Set(saved) : new Set(['root']);
     } catch (e) {
       console.error('加载展开文件夹状态失败:', e);
       return new Set(['root']);
@@ -1110,7 +1247,18 @@ const FileExplorer = ({
     setTimeout(() => {
       if (editInputRef.current) {
         editInputRef.current.focus();
-        editInputRef.current.select();
+
+        // 智能选择：如果有后缀名（包含句号），则只选择句号前的部分
+        const fileName = node.name;
+        const lastDotIndex = fileName.lastIndexOf('.');
+
+        if (lastDotIndex > 0 && lastDotIndex < fileName.length - 1) {
+          // 选择句号前的部分（文件名主体）
+          editInputRef.current.setSelectionRange(0, lastDotIndex);
+        } else {
+          // 没有后缀名则全选
+          editInputRef.current.select();
+        }
       }
     }, 0);
   };
@@ -1361,7 +1509,8 @@ const FileExplorer = ({
 
       // 保存到 localStorage
       try {
-        localStorage.setItem('filePaginationSettings', JSON.stringify(newPagination));
+        // localStorage.setItem('filePaginationSettings', JSON.stringify(newPagination));
+        userDataManager.setUserData('filePaginationSettings', newPagination);
       } catch (e) {
         console.error('保存分页设置失败:', e);
       }
@@ -1448,7 +1597,8 @@ const FileExplorer = ({
 
       // 保存到 localStorage
       try {
-        localStorage.setItem('fileSortSettings', JSON.stringify(newSettings));
+        // localStorage.setItem('fileSortSettings', JSON.stringify(newSettings));
+        userDataManager.setUserData('fileSortSettings', newSettings);
       } catch (e) {
         console.error('保存排序设置失败:', e);
       }
@@ -1470,7 +1620,8 @@ const FileExplorer = ({
 
       // 保存到 localStorage
       try {
-        localStorage.setItem('filePaginationSettings', JSON.stringify(newPagination));
+        // localStorage.setItem('filePaginationSettings', JSON.stringify(newPagination));
+        userDataManager.setUserData('filePaginationSettings', newPagination);
       } catch (e) {
         console.error('保存分页设置失败:', e);
       }
@@ -1522,12 +1673,25 @@ const FileExplorer = ({
       });
     };
 
-    // 对文件夹和文件分别排序
-    const sortedFolders = sortNodes(folders);
+    // 特殊处理文件夹部分：确保 images 和 journals 始终在最前面
+    const specialFolders = [];
+    const regularFolders = [];
+
+    folders.forEach(folder => {
+      if (folder.id === 'images' || folder.id === 'journals') {
+        specialFolders.push(folder);
+      } else {
+        regularFolders.push(folder);
+      }
+    });
+
+    // 对普通文件夹排序
+    const sortedRegularFolders = sortNodes(regularFolders);
+    // 对文件排序
     const sortedFiles = sortNodes(files);
 
-    // 合并结果：文件夹在前，文件在后
-    const sortedChildren = [...sortedFolders, ...sortedFiles];
+    // 合并结果：特殊文件夹 -> 普通文件夹 -> 文件
+    const sortedChildren = [...specialFolders, ...sortedRegularFolders, ...sortedFiles];
 
     const pagination = getFolderPagination(node.id);
     const pageSize = pagination.pageSize || 10;
@@ -1697,7 +1861,7 @@ const FileExplorer = ({
                 {expandedFolders.has(node.id) ? '▼' : '▶'}
               </span>
               <span className="icon">📁</span>
-              <span className="node-name">{node.name}</span>
+              <span className="node-name" title={node.name}>{node.name}</span>
             </div>
             {expandedFolders.has(node.id) && (
               <div className="children">
@@ -1742,7 +1906,7 @@ const FileExplorer = ({
                         }}
                       >
                         <span className="icon">🖼️</span>
-                        <span className="node-name">{image.name}</span>
+                        <span className="node-name" title={image.name}>{image.name}</span>
                       </div>
                     </div>
                   );
@@ -1824,7 +1988,7 @@ const FileExplorer = ({
                 {expandedFolders.has(node.id) ? '▼' : '▶'}
               </span>
               <span className="icon">📁</span>
-              <span className="node-name">{node.name}</span>
+              <span className="node-name" title={node.name}>{node.name}</span>
             </div>
             {expandedFolders.has(node.id) && (
               <div className="children">
@@ -1868,7 +2032,7 @@ const FileExplorer = ({
                         }}
                       >
                         <span className="icon">📝</span>
-                        <span className="node-name">{journal.name}</span>
+                        <span className="node-name" title={journal.name}>{journal.name}</span>
                       </div>
                     </div>
                   );
@@ -1985,7 +2149,7 @@ const FileExplorer = ({
                 }}
               />
             ) : (
-              <span className="node-name">{node.name}</span>
+              <span className="node-name" title={node.name}>{node.name}</span>
             )}
           </div>
           {node.type === 'folder' && expandedFolders.has(node.id) && node.children && (
@@ -2064,7 +2228,7 @@ const FileExplorer = ({
                                 }}
                               >
                                 <span className="icon">🖼️</span>
-                                <span className="node-name">{image.name}</span>
+                                <span className="node-name" title={image.name}>{image.name}</span>
                               </div>
                             </div>
                           );
@@ -2286,6 +2450,19 @@ const FileExplorer = ({
         }
         break;
 
+      case 'refresh':
+        try {
+          setLoading(true);
+          await loadFileTree();
+          // alert('文件树刷新成功');
+        } catch (error) {
+          console.error('刷新文件树失败:', error);
+          // alert('刷新文件树失败');
+        } finally {
+          setLoading(false);
+        }
+        break;
+
       // 其他操作保持不变
       case 'previewImage':
         // 打开图片预览模态框
@@ -2351,6 +2528,7 @@ const FileExplorer = ({
         handleMoveTo(node);
         break;
 
+
       case 'createFile':
         const newFile = {
           name: '未命名文件.md',
@@ -2359,13 +2537,18 @@ const FileExplorer = ({
         };
         const createdFile = await addChildNodeServer(node.id, newFile);
         if (createdFile) {
-          // 重命名完成后，自动打开新创建的文件
-          if (onFileSelect && createdFile.type === 'file') {
-            // 延迟一小段时间确保创建完成后再选择文件
-            setTimeout(() => {
-              onFileSelect(createdFile);
-            }, 100);
-          }
+          // 确保父文件夹被展开
+          setExpandedFolders(prev => {
+            const newSet = new Set(prev);
+            newSet.add(node.id);
+            saveExpandedFolders(newSet); // 保存到本地存储
+            return newSet;
+          });
+
+          // 延迟启动重命名模式，确保DOM已更新
+          setTimeout(() => {
+            startRename(createdFile);
+          }, 150);
         }
         break;
 
@@ -2375,7 +2558,21 @@ const FileExplorer = ({
           type: 'folder',
           children: []
         };
-        await addChildNodeServer(node.id, newFolder);
+        const createdFolder = await addChildNodeServer(node.id, newFolder);
+        if (createdFolder) {
+          // 确保父文件夹被展开
+          setExpandedFolders(prev => {
+            const newSet = new Set(prev);
+            newSet.add(node.id);
+            saveExpandedFolders(newSet); // 保存到本地存储
+            return newSet;
+          });
+
+          // 延迟启动重命名模式，确保DOM已更新
+          setTimeout(() => {
+            startRename(createdFolder);
+          }, 150);
+        }
         break;
 
       case 'rename':
@@ -2541,6 +2738,30 @@ const FileExplorer = ({
     setSearchTerm(tag);
   };
 
+  // 添加处理图片搜索的函数
+  const handleImageSearch = async (imageName) => {
+    setIsSearching(true);
+    setSearchTerm(imageName);
+
+    try {
+      // 获取图片引用结果
+      const referenceResults = imageReferenceIndexManager.getImageReferenceResults(imageName);
+
+      // 转换为搜索结果格式
+      const searchResults = referenceResults.map(item => ({
+        fileId: item.fileId,
+        fileName: item.fileName,
+        fileType: item.fileId.startsWith('jnl_') ? 'journal' : 'file',
+        matches: item.positions
+      }));
+
+      setSearchResults(searchResults);
+    } catch (error) {
+      console.error('图片搜索出错:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   // 搜索普通文件内容
   const searchInFiles = async (term, nodes) => {
@@ -2555,7 +2776,7 @@ const FileExplorer = ({
             const data = await response.json();
             const content = data.content || '';
 
-            // 搜索匹配段落
+            // 搜索匹配行
             const matches = findMatchingParagraphs(content, term);
             if (matches.length > 0) {
               results.push({
@@ -2583,7 +2804,7 @@ const FileExplorer = ({
     for (const node of nodes) {
       await searchNode(node);
     }
-
+    console.log('搜索结果:', results)
     return results;
   };
 
@@ -2605,9 +2826,10 @@ const FileExplorer = ({
               const data = await contentResponse.json();
               const content = data.content || '';
 
-              // 搜索匹配段落
+              // 搜索匹配行
               const matches = findMatchingParagraphs(content, term);
               if (matches.length > 0) {
+                console.log('FileExplorer.js - searchInJounralFiles:', journal.name)
                 return {
                   fileId: `journal_${journal.name}`,
                   fileName: journal.name,
@@ -2632,8 +2854,34 @@ const FileExplorer = ({
     return results;
   };
 
-  // 查找匹配的段落
   const findMatchingParagraphs = (content, term) => {
+    const matches = [];
+    const lines = content.split('\n');
+    const termLower = term.toLowerCase();
+
+    // 按行查找匹配项
+    lines.forEach((line, index) => {
+      if (line.toLowerCase().includes(termLower)) {
+        // 找到匹配项在行中的位置
+        const matchIndex = line.toLowerCase().indexOf(termLower);
+        const contextStart = Math.max(0, matchIndex - 30);
+        const contextEnd = Math.min(line.length, matchIndex + term.length + 30);
+        const context = line.substring(contextStart, contextEnd);
+
+        matches.push({
+          lineNumber: index , // 行号从1开始
+          lineContent: line,
+          context: context,
+          matchPosition: matchIndex
+        });
+        // console.log('搜索匹配项:', matches);
+      }
+    });
+
+    return matches;
+  };
+  // 查找匹配的段落
+  const findMatchingParagraphs_obsolete = (content, term) => {
     const matches = [];
     const lines = content.split('\n');
     const termLower = term.toLowerCase();
@@ -2670,6 +2918,7 @@ const FileExplorer = ({
         matches.push({
           paragraphIndex: index,
           paragraphContent: paragraph,
+          lineNumber: index,
           context: context,
           matchPosition: matchIndex
         });
@@ -3172,7 +3421,8 @@ const FileExplorer = ({
                               {match.context ? `...${match.context}...` : '上下文不可用'}
                             </span>
                             <span className="match-position">
-                              段落 {(match.paragraphIndex !== undefined) ? match.paragraphIndex + 1 : '未知'}
+                              {/*行号：{(match.paragraphIndex !== undefined) ? match.paragraphIndex + 1 : '未知'}*/}
+                              行号：{(match.lineNumber !== undefined) ? match.lineNumber : ((match.paragraphIndex !== undefined) ? match.paragraphIndex +1 :'未知')}
                             </span>
                           </div>
                         ))}
@@ -3208,6 +3458,13 @@ const FileExplorer = ({
         >
           {contextMenu.node && (
             <>
+              <div
+                className="menu-item"
+                onClick={() => handleContextMenuAction('refresh')}
+              >
+                刷新
+              </div>
+
               {/* 图片文件的特殊菜单 */}
               {contextMenu.node.id && contextMenu.node.id.startsWith('image_') && (
                 <>
@@ -3303,6 +3560,10 @@ const FileExplorer = ({
                   <div className="menu-item" onClick={() => handleContextMenuAction('rename')}>
                     重命名
                   </div>
+                  <div className="menu-item" onClick={() => handleContextMenuAction('delete')}>
+                    删除
+                  </div>
+
                 </>
               )}
 
@@ -3372,6 +3633,7 @@ const FileExplorer = ({
         setImagePosition={setImagePosition}
         onDelete={deleteImage}
         onFileSelect={onFileSelect} // 添加这一行
+        onImageSearch={handleImageSearch}
       />
 
       {MoveToModal()}

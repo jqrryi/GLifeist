@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import SettingsTab from './SettingsTab';
 
-const SettingsModal = ({ isOpen, title, onClose, targetGroup, settings, onUpdateSettings }) => {
+const SettingsModal = ({ isOpen, title, onClose, targetGroup, settings, onUpdateSettings, defaultSettings, stats }) => {
   // 添加 ESC 键监听功能
   useEffect(() => {
     const handleEscKey = (event) => {
@@ -52,6 +52,8 @@ const SettingsModal = ({ isOpen, title, onClose, targetGroup, settings, onUpdate
           onUpdateSettings={onUpdateSettings}
           targetGroup={targetGroup}
           onShowStatus={showStatus}
+          defaultSettings={defaultSettings}
+          stats={stats}
         />
       </div>
     </div>

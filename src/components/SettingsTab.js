@@ -5,130 +5,10 @@ import { showInfoPopup } from '../utils/infoPopup';
 import {useLocation} from 'react-router-dom';
 import menuItems from '../utils/menuItems'; // 引入菜单项
 
-const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onSettingsChange }) => {
+const SettingsTab = ({ settings, defaultSettings, stats, onUpdateSettings, targetGroup, onShowStatus,onSettingsChange, currentUserProfile }) => {
   const location = useLocation();
   const [localSettings, setLocalSettings] = useState({
     ...settings,
-    taskCycleTypes: settings.taskCycleTypes || ['单次', '日循环', '周循环', '月循环', '年循环'],
-    // 确保其他设置项也有默认值
-    creditTypes: settings.creditTypes || ["水晶", "星钻", "魂玉", "骨贝", "源石", "灵石", "金币", "元宝"],
-    itemCategories: settings.itemCategories || ["经验类", "属性类", "消耗类", "装备类", "材料类", "任务类", "其它类"],
-    taskCategories: settings.taskCategories || ['主线任务', '辅线任务', '支线任务', '特殊任务'],
-    taskDomains: settings.taskDomains || ['学习', '工作', '运动', '生活', '社交', '自修'],
-    taskPriorities: settings.taskPriorities || ['重要且紧急', '重要不紧急', '不重要但紧急', '不重要不紧急'],
-    taskStatuses: settings.taskStatuses || ['未完成', '进行中', '重复中', '已完成'],
-    propertyCategories: settings.propertyCategories || ['智力','力量', '体质', '活力', '敏捷', '灵力'], // 添加默认属性类别
-    taskFieldMappings: settings.taskFieldMappings || {
-      categories: {},
-      domains: {},
-      priorities: {},
-      statuses: {},
-      cycleTypes: {}
-    },
-    // taskFieldWeights: settings.taskFieldWeights || {
-    //   categories: {},
-    //   domains: {},
-    //   priorities: {},
-    //   statuses: {},
-    //   cycleTypes: {},
-    // },
-    // 添加操作按钮设置的默认值
-    actionButtonSettings: settings.actionButtonSettings || {
-      view: 'visible',
-      edit: 'visible',
-      complete: 'visible',
-      copy: 'hidden',
-      delete: 'hidden',
-      archive: 'hidden'
-    },
-    // 添加主操作按钮设置的默认值
-    mainActionButtonSettings: settings.mainActionButtonSettings || {
-      addTask: 'visible',
-      batchDelete: 'visible',
-      batchArchive: 'visible',
-      refreshCycles: 'visible',
-      importTasks: 'visible',  // 添加导入任务按钮配置
-      exportTasks: 'visible'   // 添加导出任务按钮配置
-    },
-
-    // 添加边框设置
-    borderSettings: settings.borderSettings ? {
-      top: {
-        enabled: {
-          board: settings.borderSettings?.top?.enabled?.board !== undefined ?
-                 settings.borderSettings.top.enabled.board : false,
-          calendar: settings.borderSettings?.top?.enabled?.calendar !== undefined ?
-                    settings.borderSettings.top.enabled.calendar : false
-        },
-        field: settings.borderSettings?.top?.field || 'priority',
-      },
-      right: {
-        enabled: {
-          board: settings.borderSettings?.right?.enabled?.board !== undefined ?
-                 settings.borderSettings.right.enabled.board : false,
-          calendar: settings.borderSettings?.right?.enabled?.calendar !== undefined ?
-                    settings.borderSettings.right.enabled.calendar : false
-        },
-        field: settings.borderSettings?.right?.field || 'domain',
-      },
-      bottom: {
-        enabled: {
-          board: settings.borderSettings?.bottom?.enabled?.board !== undefined ?
-                 settings.borderSettings.bottom.enabled.board : false,
-          calendar: settings.borderSettings?.bottom?.enabled?.calendar !== undefined ?
-                    settings.borderSettings.bottom.enabled.calendar : false
-        },
-        field: settings.borderSettings?.bottom?.field || 'status',
-      },
-      left: {
-        enabled: {
-          board: settings.borderSettings?.left?.enabled?.board !== undefined ?
-                 settings.borderSettings.left.enabled.board : true,
-          calendar: settings.borderSettings?.left?.enabled?.calendar !== undefined ?
-                    settings.borderSettings.left.enabled.calendar : false
-        },
-        field: settings.borderSettings?.left?.field || 'category',
-      }
-    } : {
-      // 如果 settings.borderSettings 不存在，使用默认配置
-      top: {
-        enabled: { board: false, calendar: false },
-        field: 'priority',
-      },
-      right: {
-        enabled: { board: false, calendar: false },
-        field: 'domain',
-      },
-      bottom: {
-        enabled: { board: false, calendar: false },
-        field: 'status',
-      },
-      left: {
-        enabled: { board: true, calendar: false },
-        field: 'category',
-      }
-    },
-
-    // 添加日历视图设置
-    calendarViewSettings: settings.calendarViewSettings ? {
-      dateField: settings.calendarViewSettings.dateField || 'start_time',
-      displayField: settings.calendarViewSettings.displayField || 'name',
-      maxChars: settings.calendarViewSettings.maxChars || 50
-    } : {
-      dateField: 'start_time',
-      displayField: 'name',
-      maxChars: 50
-    },
-    defaultParallelWorld: settings.defaultParallelWorld || "默认世界", // 添加默认游戏世界配置
-    fieldAbbreviations: settings.fieldAbbreviations || {
-      categories: settings.fieldAbbreviations?.categories || {},
-      domains: settings.fieldAbbreviations?.domains || {},
-      priorities: settings.fieldAbbreviations?.priorities || {},
-      statuses: settings.fieldAbbreviations?.statuses || {},
-      cycleTypes: settings.fieldAbbreviations?.cycleTypes || {},
-    },
-    levelToRealm: settings.levelToRealm || [],
-    propertyToRealm: settings.propertyToRealm || [],
   });
 
   // 在现有的设置状态中添加新字段
@@ -151,13 +31,16 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
   const [sellRates, setSellRates] = useState({});
 
   // 添加状态管理
+  const [allGroupsCollapsed, setAllGroupsCollapsed] = useState(false);
   const [levelToRealm, setLevelToRealm] = useState(localSettings.levelToRealm || []);
   const [propertyToRealm, setPropertyToRealm] = useState(localSettings.propertyToRealm || []);
   const [showRealmModal, setShowRealmModal] = useState(false);
   const [realmModalData, setRealmModalData] = useState([]);
   const [realmModalTitle, setRealmModalTitle] = useState('');
   const [jsonHandlingMode, setJsonHandlingMode] = useState('immediate'); // 'immediate' 或 'delayed'
-
+  const [showDefaultSections, setShowDefaultSections] = useState(false);
+  const [gmCommandOrder, setGmCommandOrder] = useState([]);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // 1. 在文件顶部添加默认配置常量（避免重复定义）
   const DEFAULT_EFFECT_CONFIG =  {
@@ -235,9 +118,18 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
         }
         setSellRates(defaultRates);
       }
+
+      // 初始化GM命令顺序
+      if (settings.gmCommands) {
+        const commandIds = Object.keys(settings.gmCommands);
+        setGmCommandOrder(commandIds);
+      }
     }
   }, [settings]); // 确保依赖项正确
 
+  const setDefaultSettings = () => {
+    setLocalSettings(defaultSettings)
+  }
 
   // 在 SettingsTab.js 中添加一个安全检查函数来确保 borderSettings 正确初始化
   const getSafeBorderSettings = (borderSettings) => {
@@ -436,6 +328,23 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
     }
   };
 
+  const toggleAllGroups = () => {
+    const groupElements = document.querySelectorAll('.settings-group');
+    const anyOpen = Array.from(groupElements).some(group => group.hasAttribute('open'));
+
+    if (anyOpen) {
+      // 如果有任何一个分组是展开的，则折叠全部
+      groupElements.forEach(group => group.removeAttribute('open'));
+      setAllGroupsCollapsed(true);
+    } else {
+      // 否则展开全部
+      groupElements.forEach(group => group.setAttribute('open', ''));
+      setAllGroupsCollapsed(false);
+    }
+  };
+
+
+
   // 1. 首先在 useState 初始化中添加 effectConfig 状态
   const [effectConfig, setEffectConfig] = useState(localSettings.effectConfig || DEFAULT_EFFECT_CONFIG);
   // 2. 添加状态管理最大化弹窗
@@ -481,6 +390,16 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
     };
   }, [isEffectConfigModalOpen]);
 
+  useEffect(() => {
+    if (currentUserProfile) {
+      setIsAdmin(currentUserProfile.permissions.includes('admin'));
+    } else {
+      setIsAdmin(false);
+    }
+
+  }, [currentUserProfile]);
+
+
   // 添加操作列按钮设置相关函数
   const updateActionButtonSettings = (newSettings) => {
     const updatedSettings = {
@@ -498,149 +417,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
     });
   };
 
-  // const TaskCodeSettings = ({
-  //   taskCategories,
-  //   taskDomains,
-  //   taskPriorities,
-  //   taskCycleTypes,
-  //   codeSettings,
-  //   onCodeSettingsChange
-  // }) => {
-  //   // 初始化代码设置
-  //   const [codes, setCodes] = useState(codeSettings || {
-  //     categories: {},
-  //     domains: {},
-  //     priorities: {},
-  //     cycleTypes: {}
-  //   });
-  //
-  //   // 验证唯一性
-  //   const isUniqueCode = (code, excludeField = null, excludeValue = null) => {
-  //     for (const [field, mappings] of Object.entries(codes)) {
-  //       if (excludeField === field) continue;
-  //
-  //       for (const [value, existingCode] of Object.entries(mappings)) {
-  //         if (excludeValue === value) continue;
-  //
-  //         if (existingCode === code) {
-  //           return false;
-  //         }
-  //       }
-  //     }
-  //
-  //     // 检查同一字段内的唯一性
-  //     if (excludeField) {
-  //       for (const [value, existingCode] of Object.entries(codes[excludeField])) {
-  //         if (excludeValue === value) continue;
-  //
-  //         if (existingCode === code) {
-  //           return false;
-  //         }
-  //       }
-  //     }
-  //
-  //     return true;
-  //   };
-  //
-  //   // 更新代码
-  //   const updateCode = (field, value, code) => {
-  //     // 验证代码唯一性
-  //     if (code && !isUniqueCode(code, field, value)) {
-  //       alert('代码必须唯一，请使用其他代码');
-  //       return;
-  //     }
-  //
-  //     setCodes(prev => ({
-  //       ...prev,
-  //       [field]: {
-  //         ...prev[field],
-  //         [value]: code
-  //       }
-  //     }));
-  //   };
-  //
-  //   // 保存设置
-  //   const handleSave = () => {
-  //     onCodeSettingsChange(codes);
-  //   };
-  //
-  //   return (
-  //     <div className="task-code-settings">
-  //       <h3>任务字段代码设置</h3>
-  //
-  //       <div className="code-section">
-  //         <h4>任务类别代码</h4>
-  //         {taskCategories.map(category => (
-  //           <div key={category} className="code-item">
-  //             <label>{category}:</label>
-  //             <input
-  //               type="text"
-  //               value={codes.categories[category] || ''}
-  //               onChange={(e) => updateCode('categories', category, e.target.value)}
-  //               placeholder="输入唯一代码"
-  //               maxLength="10"
-  //             />
-  //           </div>
-  //         ))}
-  //       </div>
-  //
-  //       <div className="code-section">
-  //         <h4>任务领域代码</h4>
-  //         {taskDomains.map(domain => (
-  //           <div key={domain} className="code-item">
-  //             <label>{domain}:</label>
-  //             <input
-  //               type="text"
-  //               value={codes.domains[domain] || ''}
-  //               onChange={(e) => updateCode('domains', domain, e.target.value)}
-  //               placeholder="输入唯一代码"
-  //               maxLength="10"
-  //             />
-  //           </div>
-  //         ))}
-  //       </div>
-  //
-  //       <div className="code-section">
-  //         <h4>任务优先级代码</h4>
-  //         {taskPriorities.map(priority => (
-  //           <div key={priority} className="code-item">
-  //             <label>{priority}:</label>
-  //             <input
-  //               type="text"
-  //               value={codes.priorities[priority] || ''}
-  //               onChange={(e) => updateCode('priorities', priority, e.target.value)}
-  //               placeholder="输入唯一代码"
-  //               maxLength="10"
-  //             />
-  //           </div>
-  //         ))}
-  //       </div>
-  //
-  //       <div className="code-section">
-  //         <h4>循环周期代码</h4>
-  //         {taskCycleTypes.map((cycleType, index) => {
-  //           const cycleValues = ['single', 'daily', 'weekly', 'monthly', 'yearly'];
-  //           const cycleValue = cycleValues[index] || cycleType;
-  //
-  //           return (
-  //             <div key={cycleType} className="code-item">
-  //               <label>{cycleType}:</label>
-  //               <input
-  //                 type="text"
-  //                 value={codes.cycleTypes[cycleValue] || ''}
-  //                 onChange={(e) => updateCode('cycleTypes', cycleValue, e.target.value)}
-  //                 placeholder="输入唯一代码"
-  //                 maxLength="10"
-  //               />
-  //             </div>
-  //           );
-  //         })}
-  //       </div>
-  //
-  //       <button onClick={handleSave}>保存代码设置</button>
-  //     </div>
-  //   );
-  // };
+
 
   // 在 SettingsTab 组件中添加更新主按钮设置的函数
   const updateMainActionButtonSettings = (newSettings) => {
@@ -719,7 +496,21 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
     return (
       <details className="settings-group">
         <summary className="settings-group-title">【任务】卡片边框设置</summary>
-        <div className="settings-section">
+        <div className="settings-subsection">
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <h4 title="">卡片边框颜色配置</h4>
+            <button
+              onClick={(e) => showInfoPopup(
+                '💡',
+                '<p>设置【任务】看板视图和日历视图中任务卡片边框位置与字段对应关系及颜色</p>',
+                e
+              )}
+              style={{background:'transparent',color:'black',padding:'2px'}}
+            >
+              ⓘ
+            </button>
+          </div>
+
           <table className="border-settings-table">
             <thead>
               <tr>
@@ -1186,44 +977,27 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
     return (
       <details className="settings-group">
         <summary className="settings-group-title">【任务】日历视图设置</summary>
-        <div className="settings-section">
-          {/*<div className="setting-item inline-setting">*/}
-          {/*  <label>日期字段：</label>*/}
-          {/*  <select*/}
-          {/*    value={safeCalendarViewSettings.dateField}*/}
-          {/*    onChange={(e) => {*/}
-          {/*      setLocalSettings({*/}
-          {/*        ...localSettings,*/}
-          {/*        calendarViewSettings: {*/}
-          {/*          ...safeCalendarViewSettings,*/}
-          {/*          dateField: e.target.value*/}
-          {/*        }*/}
-          {/*      });*/}
-          {/*    }}*/}
-          {/*  >*/}
-          {/*    <option value="start_time">开始时间</option>*/}
-          {/*    <option value="complete_time">完成时间</option>*/}
-          {/*  </select>*/}
-          {/*</div>*/}
+        <div className="settings-subsection">
 
-          {/*<div className="setting-item inline-setting">*/}
-          {/*  <label>显示字段：</label>*/}
-          {/*  <select*/}
-          {/*    value={safeCalendarViewSettings.displayField}*/}
-          {/*    onChange={(e) => {*/}
-          {/*      setLocalSettings({*/}
-          {/*        ...localSettings,*/}
-          {/*        calendarViewSettings: {*/}
-          {/*          ...safeCalendarViewSettings,*/}
-          {/*          displayField: e.target.value*/}
-          {/*        }*/}
-          {/*      });*/}
-          {/*    }}*/}
-          {/*  >*/}
-          {/*    <option value="name">任务名称</option>*/}
-          {/*    <option value="description">任务描述</option>*/}
-          {/*  </select>*/}
-          {/*</div>*/}
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <h4>日历视图相关配置</h4>
+            <button
+              onClick={(e) => showInfoPopup(
+                '💡',
+                '<small>任务卡片字符数：任务卡片显示内容的最大字符数<br> ' +
+                  '每周第一天：设置每周以哪天开始 <br> ' +
+                  '每个网格默认显示任务数：单个日历网格默认显示的最大任务卡片数目<br>' +
+                  '鼠标悬停方式：设置鼠标悬停显示任务简要详情的方式<br>' +
+                  '统计列显示项目：设置周统计或月统计网格中显示的统计项目 </small>',
+                e
+              )}
+              style={{background:'transparent',color:'black',padding:'2px' }}
+            >
+              ⓘ
+            </button>
+          </div>
+
+
 
 
           <div className="setting-item inline-setting">
@@ -1479,516 +1253,6 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
 
     return mergedColors;
   };
-  // 在 SettingsTab.js 中修改 renderTaskFieldMapping 函数，补全颜色字段列
-  // const renderTaskFieldMapping = () => {
-  //   const taskFieldMappings = localSettings.taskFieldMappings || {};
-  //
-  //   // 修改获取字段值的方式
-  //   const getCategoryMapping = (category) => {
-  //     return taskFieldMappings.categories?.[category] || { weight: 0, abbreviation: '', color: '#cccccc' };
-  //   };
-  //
-  //   // 修改更新函数
-  //   const updateCategoryMapping = (category, field, value) => {
-  //     setLocalSettings({
-  //       ...localSettings,
-  //       taskFieldMappings: {
-  //         ...localSettings.taskFieldMappings,
-  //         categories: {
-  //           ...localSettings.taskFieldMappings?.categories,
-  //           [category]: {
-  //             ...getCategoryMapping(category),
-  //             [field]: value
-  //           }
-  //         }
-  //       }
-  //     });
-  //   };
-  //
-  //
-  //
-  //   // 确保 taskFieldWeights 存在且结构正确
-  //   const safeTaskFieldWeights = {
-  //     categories: localSettings.taskFieldWeights?.categories || {},
-  //     domains: localSettings.taskFieldWeights?.domains || {},
-  //     priorities: localSettings.taskFieldWeights?.priorities || {},
-  //     statuses: localSettings.taskFieldWeights?.statuses || {},
-  //     cycleTypes: localSettings.taskFieldWeights?.cycleTypes || {},
-  //   };
-  //
-  //   // 获取各类别的值列表
-  //   const categoryValues = localSettings.taskCategories || [];
-  //   const domainValues = localSettings.taskDomains || [];
-  //   const priorityValues = localSettings.taskPriorities || [];
-  //   const statusValues = localSettings.taskStatuses || [];
-  //   const cycleTypeValues = localSettings.taskCycleTypes || [];
-  //
-  //   // 获取安全的边框设置
-  //   const safeBorderSettings = getSafeBorderSettings(localSettings.borderSettings);
-  //
-  //   // 辅助函数：获取字段颜色
-  //   const getFieldColor = (fieldType, fieldValue) => {
-  //     let colorConfig = {};
-  //     switch (fieldType) {
-  //       case 'category':
-  //         colorConfig = safeBorderSettings.left?.colors || {};
-  //         break;
-  //       case 'domain':
-  //         colorConfig = safeBorderSettings.top?.colors || {};
-  //         break;
-  //       case 'priority':
-  //         colorConfig = safeBorderSettings.right?.colors || {};
-  //         break;
-  //       case 'status':
-  //         colorConfig = safeBorderSettings.bottom?.colors || {};
-  //         break;
-  //       default:
-  //         return '#cccccc';
-  //     }
-  //     return colorConfig[fieldValue] || '#cccccc';
-  //   };
-  //
-  //   // 辅助函数：更新字段颜色
-  //   const updateFieldColor = (fieldType, fieldValue, color) => {
-  //     const positionMap = {
-  //       'category': 'left',
-  //       'domain': 'top',
-  //       'priority': 'right',
-  //       'status': 'bottom'
-  //     };
-  //
-  //     const position = positionMap[fieldType];
-  //     if (!position) return;
-  //
-  //     const newBorderSettings = { ...safeBorderSettings };
-  //     if (!newBorderSettings[position]) {
-  //       newBorderSettings[position] = { enabled: { board: false, calendar: false }, field: fieldType, colors: {} };
-  //     }
-  //     if (!newBorderSettings[position].colors) {
-  //       newBorderSettings[position].colors = {};
-  //     }
-  //
-  //     newBorderSettings[position].colors[fieldValue] = color;
-  //
-  //     setLocalSettings({
-  //       ...localSettings,
-  //       borderSettings: newBorderSettings
-  //     });
-  //   };
-  //
-  //   return (
-  //     <details className="settings-group">
-  //       <summary className="settings-group-title">【任务】字段映射设置</summary>
-  //
-  //       <div className="settings-section">
-  //         <h4>任务字段权重与简称映射</h4>
-  //         <p>为不同任务字段设置权重值和简称，用于任务积分计算和显示优化</p>
-  //
-  //         <table className="field-mapping-table">
-  //           <thead>
-  //             <tr>
-  //               <th>字段类型</th>
-  //               <th>字段值</th>
-  //               <th>权重</th>
-  //               <th>简称</th>
-  //               <th>颜色</th>
-  //             </tr>
-  //           </thead>
-  //           <tbody>
-  //             {/* 类别映射 */}
-  //             {categoryValues.map((category, index) => {
-  //               const weight = safeTaskFieldWeights.categories[category] || 0;
-  //               // 获取简称，如果不存在则使用默认值（前两个字符）
-  //               const abbreviation = localSettings.fieldAbbreviations?.categories?.[category] ||
-  //                                   (category.length > 2 ? category.substring(0, 2) : category);
-  //               // 获取颜色
-  //               const color = getFieldColor('category', category);
-  //
-  //               return (
-  //                 <tr key={`category-${index}`}>
-  //                   {index === 0 && (
-  //                     <td rowSpan={categoryValues.length}>类别</td>
-  //                   )}
-  //                   <td>{category}</td>
-  //                   <td>
-  //                     <input
-  //                       type="number"
-  //                       value={weight}
-  //                       onChange={(e) => {
-  //                         const newWeights = {
-  //                           ...localSettings.taskFieldWeights,
-  //                           categories: {
-  //                             ...localSettings.taskFieldWeights.categories,
-  //                             [category]: parseFloat(e.target.value) || 0
-  //                           }
-  //                         };
-  //                         setLocalSettings({
-  //                           ...localSettings,
-  //                           taskFieldWeights: newWeights
-  //                         });
-  //                       }}
-  //                       step="0.1"
-  //                     />
-  //                   </td>
-  //                   <td>
-  //                     <input
-  //                       type="text"
-  //                       value={abbreviation}
-  //                       onChange={(e) => {
-  //                         const newAbbreviations = {
-  //                           ...localSettings.fieldAbbreviations,
-  //                           categories: {
-  //                             ...localSettings.fieldAbbreviations?.categories,
-  //                             [category]: e.target.value
-  //                           }
-  //                         };
-  //                         setLocalSettings({
-  //                           ...localSettings,
-  //                           fieldAbbreviations: newAbbreviations
-  //                         });
-  //                       }}
-  //                       maxLength="4"
-  //                       placeholder="简称"
-  //                     />
-  //                   </td>
-  //                   <td>
-  //                     <div className="color-input-combo">
-  //                       <input
-  //                         type="color"
-  //                         value={color}
-  //                         onChange={(e) => updateFieldColor('category', category, e.target.value)}
-  //                         className="color-picker"
-  //                       />
-  //                       <input
-  //                         type="text"
-  //                         value={color}
-  //                         onChange={(e) => updateFieldColor('category', category, e.target.value)}
-  //                         placeholder="#cccccc"
-  //                         className="hex-input"
-  //                       />
-  //                     </div>
-  //                   </td>
-  //                 </tr>
-  //               );
-  //             })}
-  //
-  //             {/* 领域映射 */}
-  //             {domainValues.map((domain, index) => {
-  //               const weight = safeTaskFieldWeights.domains[domain] || 0;
-  //               // 获取简称，如果不存在则使用默认值（前两个字符）
-  //               const abbreviation = localSettings.fieldAbbreviations?.domains?.[domain] ||
-  //                                   (domain.length > 2 ? domain.substring(0, 2) : domain);
-  //               // 获取颜色
-  //               const color = getFieldColor('domain', domain);
-  //
-  //               return (
-  //                 <tr key={`domain-${index}`}>
-  //                   {index === 0 && (
-  //                     <td rowSpan={domainValues.length}>领域</td>
-  //                   )}
-  //                   <td>{domain}</td>
-  //                   <td>
-  //                     <input
-  //                       type="number"
-  //                       value={weight}
-  //                       onChange={(e) => {
-  //                         const newWeights = {
-  //                           ...localSettings.taskFieldWeights,
-  //                           domains: {
-  //                             ...localSettings.taskFieldWeights.domains,
-  //                             [domain]: parseFloat(e.target.value) || 0
-  //                           }
-  //                         };
-  //                         setLocalSettings({
-  //                           ...localSettings,
-  //                           taskFieldWeights: newWeights
-  //                         });
-  //                       }}
-  //                       step="0.1"
-  //                     />
-  //                   </td>
-  //                   <td>
-  //                     <input
-  //                       type="text"
-  //                       value={abbreviation}
-  //                       onChange={(e) => {
-  //                         const newAbbreviations = {
-  //                           ...localSettings.fieldAbbreviations,
-  //                           domains: {
-  //                             ...localSettings.fieldAbbreviations?.domains,
-  //                             [domain]: e.target.value
-  //                           }
-  //                         };
-  //                         setLocalSettings({
-  //                           ...localSettings,
-  //                           fieldAbbreviations: newAbbreviations
-  //                         });
-  //                       }}
-  //                       maxLength="4"
-  //                       placeholder="简称"
-  //                     />
-  //                   </td>
-  //                   <td>
-  //                     <div className="color-input-combo">
-  //                       <input
-  //                         type="color"
-  //                         value={color}
-  //                         onChange={(e) => updateFieldColor('domain', domain, e.target.value)}
-  //                         className="color-picker"
-  //                       />
-  //                       <input
-  //                         type="text"
-  //                         value={color}
-  //                         onChange={(e) => updateFieldColor('domain', domain, e.target.value)}
-  //                         placeholder="#cccccc"
-  //                         className="hex-input"
-  //                       />
-  //                     </div>
-  //                   </td>
-  //                 </tr>
-  //               );
-  //             })}
-  //
-  //             {/* 优先级映射 */}
-  //             {priorityValues.map((priority, index) => {
-  //               const weight = safeTaskFieldWeights.priorities[priority] || 0;
-  //               // 获取简称，如果不存在则使用默认值（前两个字符）
-  //               const abbreviation = localSettings.fieldAbbreviations?.priorities?.[priority] ||
-  //                                   (priority.length > 2 ? priority.substring(0, 2) : priority);
-  //               // 获取颜色
-  //               const color = getFieldColor('priority', priority);
-  //
-  //               return (
-  //                 <tr key={`priority-${index}`}>
-  //                   {index === 0 && (
-  //                     <td rowSpan={priorityValues.length}>优先级</td>
-  //                   )}
-  //                   <td>{priority}</td>
-  //                   <td>
-  //                     <input
-  //                       type="number"
-  //                       value={weight}
-  //                       onChange={(e) => {
-  //                         const newWeights = {
-  //                           ...localSettings.taskFieldWeights,
-  //                           priorities: {
-  //                             ...localSettings.taskFieldWeights.priorities,
-  //                             [priority]: parseFloat(e.target.value) || 0
-  //                           }
-  //                         };
-  //                         setLocalSettings({
-  //                           ...localSettings,
-  //                           taskFieldWeights: newWeights
-  //                         });
-  //                       }}
-  //                       step="0.1"
-  //                     />
-  //                   </td>
-  //                   <td>
-  //                     <input
-  //                       type="text"
-  //                       value={abbreviation}
-  //                       onChange={(e) => {
-  //                         const newAbbreviations = {
-  //                           ...localSettings.fieldAbbreviations,
-  //                           priorities: {
-  //                             ...localSettings.fieldAbbreviations?.priorities,
-  //                             [priority]: e.target.value
-  //                           }
-  //                         };
-  //                         setLocalSettings({
-  //                           ...localSettings,
-  //                           fieldAbbreviations: newAbbreviations
-  //                         });
-  //                       }}
-  //                       maxLength="4"
-  //                       placeholder="简称"
-  //                     />
-  //                   </td>
-  //                   <td>
-  //                     <div className="color-input-combo">
-  //                       <input
-  //                         type="color"
-  //                         value={color}
-  //                         onChange={(e) => updateFieldColor('priority', priority, e.target.value)}
-  //                         className="color-picker"
-  //                       />
-  //                       <input
-  //                         type="text"
-  //                         value={color}
-  //                         onChange={(e) => updateFieldColor('priority', priority, e.target.value)}
-  //                         placeholder="#cccccc"
-  //                         className="hex-input"
-  //                       />
-  //                     </div>
-  //                   </td>
-  //                 </tr>
-  //               );
-  //             })}
-  //
-  //             {/* 状态映射 */}
-  //             {statusValues.map((status, index) => {
-  //               const weight = safeTaskFieldWeights.statuses[status] || 0;
-  //               // 获取简称，如果不存在则使用默认值（前两个字符）
-  //               const abbreviation = localSettings.fieldAbbreviations?.statuses?.[status] ||
-  //                                   (status.length > 2 ? status.substring(0, 2) : status);
-  //               // 获取颜色
-  //               const color = getFieldColor('status', status);
-  //
-  //               return (
-  //                 <tr key={`status-${index}`}>
-  //                   {index === 0 && (
-  //                     <td rowSpan={statusValues.length}>状态</td>
-  //                   )}
-  //                   <td>{status}</td>
-  //                   <td>
-  //                     <input
-  //                       type="number"
-  //                       value={weight}
-  //                       onChange={(e) => {
-  //                         const newWeights = {
-  //                           ...localSettings.taskFieldWeights,
-  //                           statuses: {
-  //                             ...localSettings.taskFieldWeights.statuses,
-  //                             [status]: parseFloat(e.target.value) || 0
-  //                           }
-  //                         };
-  //                         setLocalSettings({
-  //                           ...localSettings,
-  //                           taskFieldWeights: newWeights
-  //                         });
-  //                       }}
-  //                       step="0.1"
-  //                     />
-  //                   </td>
-  //                   <td>
-  //                     <input
-  //                       type="text"
-  //                       value={abbreviation}
-  //                       onChange={(e) => {
-  //                         const newAbbreviations = {
-  //                           ...localSettings.fieldAbbreviations,
-  //                           statuses: {
-  //                             ...localSettings.fieldAbbreviations?.statuses,
-  //                             [status]: e.target.value
-  //                           }
-  //                         };
-  //                         setLocalSettings({
-  //                           ...localSettings,
-  //                           fieldAbbreviations: newAbbreviations
-  //                         });
-  //                       }}
-  //                       maxLength="4"
-  //                       placeholder="简称"
-  //                     />
-  //                   </td>
-  //                   <td>
-  //                     <div className="color-input-combo">
-  //                       <input
-  //                         type="color"
-  //                         value={color}
-  //                         onChange={(e) => updateFieldColor('status', status, e.target.value)}
-  //                         className="color-picker"
-  //                       />
-  //                       <input
-  //                         type="text"
-  //                         value={color}
-  //                         onChange={(e) => updateFieldColor('status', status, e.target.value)}
-  //                         placeholder="#cccccc"
-  //                         className="hex-input"
-  //                       />
-  //                     </div>
-  //                   </td>
-  //                 </tr>
-  //               );
-  //             })}
-  //
-  //             {/* 循环周期映射 */}
-  //             {cycleTypeValues.map((cycleType, index) => {
-  //               const weight = safeTaskFieldWeights.cycleTypes[cycleType] || 0;
-  //               // 获取简称，如果不存在则使用默认值（前两个字符）
-  //               const abbreviation = localSettings.fieldAbbreviations?.cycleTypes?.[cycleType] ||
-  //                                   (cycleType.length > 2 ? cycleType.substring(0, 2) : cycleType);
-  //
-  //               return (
-  //                 <tr key={`cycleType-${index}`}>
-  //                   {index === 0 && (
-  //                     <td rowSpan={cycleTypeValues.length}>循环周期</td>
-  //                   )}
-  //                   <td>{cycleType}</td>
-  //                   <td>
-  //                     <input
-  //                       type="number"
-  //                       value={weight}
-  //                       onChange={(e) => {
-  //                         const newWeights = {
-  //                           ...localSettings.taskFieldWeights,
-  //                           cycleTypes: {
-  //                             ...localSettings.taskFieldWeights.cycleTypes,
-  //                             [cycleType]: parseFloat(e.target.value) || 0
-  //                           }
-  //                         };
-  //                         setLocalSettings({
-  //                           ...localSettings,
-  //                           taskFieldWeights: newWeights
-  //                         });
-  //                       }}
-  //                       step="0.1"
-  //                     />
-  //                   </td>
-  //                   <td>
-  //                     <input
-  //                       type="text"
-  //                       value={abbreviation}
-  //                       onChange={(e) => {
-  //                         const newAbbreviations = {
-  //                           ...localSettings.fieldAbbreviations,
-  //                           cycleTypes: {
-  //                             ...localSettings.fieldAbbreviations?.cycleTypes,
-  //                             [cycleType]: e.target.value
-  //                           }
-  //                         };
-  //                         setLocalSettings({
-  //                           ...localSettings,
-  //                           fieldAbbreviations: newAbbreviations
-  //                         });
-  //                       }}
-  //                       maxLength="4"
-  //                       placeholder="简称"
-  //                     />
-  //                   </td>
-  //                   <td>
-  //                     <div className="color-input-combo">
-  //                       <div className="color-picker-wrapper">
-  //                         <input
-  //                           type="color"
-  //                           value="#cccccc"
-  //                           className="color-picker"
-  //                           disabled
-  //                         />
-  //                       </div>
-  //                       <div className="hex-input-wrapper">
-  //                         <input
-  //                           type="text"
-  //                           value="#cccccc"
-  //                           placeholder="#cccccc"
-  //                           className="hex-input"
-  //                           disabled
-  //                         />
-  //                       </div>
-  //                     </div>
-  //                   </td>
-  //                 </tr>
-  //               );
-  //             })}
-  //           </tbody>
-  //         </table>
-  //       </div>
-  //     </details>
-  //   );
-  // };
-  // 在 SettingsTab.js 中修改 renderTaskFieldMapping 函数，整合所有字段类型的处理
-  // 在 SettingsTab.js 中修改 renderTaskFieldMapping 函数
 
   // 在 SettingsTab.js 中修改 renderTaskFieldMapping 函数，添加代码字段
   const renderTaskFieldMapping = () => {
@@ -2032,9 +1296,23 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
       <details className="settings-group">
         <summary className="settings-group-title">【任务】字段映射设置</summary>
 
-        <div className="settings-section">
-          <h4>任务字段权重与简称映射</h4>
-          <p>为不同任务字段设置权重值、简称、代码、高亮颜色，用于任务积分计算、高效显示、快速输入等</p>
+        <div className="settings-subsection">
+          {/*<h4>任务字段权重与简称映射</h4>*/}
+          {/*<p>为不同任务字段设置权重值、简称、代码、高亮颜色，用于任务积分计算、高效显示、快速输入等</p>*/}
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <h4 title="为不同任务字段设置权重值、简称、代码、高亮颜色，用于任务积分计算、高效显示、快速输入等">任务字段权重、简称、代码与颜色映射表</h4>
+            <button
+              onClick={(e) => showInfoPopup(
+                '💡',
+                '<p>为不同任务字段设置权重值、简称、代码、高亮颜色。权重值用于任务奖励的计算，简称和颜色用于【任务】模块中的高效显示，代码用于快速添加任务</p>',
+                e
+              )}
+              style={{background:'transparent',color:'black',padding:'2px' }}
+            >
+              ⓘ
+            </button>
+          </div>
+
 
           <table className="field-mapping-table">
             <thead>
@@ -2484,7 +1762,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
             </label>
           </div>
 
-          <h4>主操作按钮</h4>
+          <h4>全局操作按钮</h4>
           <div className="setting-item">
             <label>
               <input
@@ -2627,7 +1905,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
 
 
           <div className="setting-item">
-            <p>注：未勾选的按钮将被收纳至"更多"下拉菜单中</p>
+            <p style={{textAlign: 'left',fontSize: '12px'}}>注：未勾选的按钮将被收纳至"更多"下拉菜单中</p>
           </div>
         </div>
       </details>
@@ -2656,18 +1934,30 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
         <summary className="settings-group-title">面板设置</summary>
 
         <div className="settings-subsection">
-          <h4>积分类型、任务领域与属性类别映射</h4>
-          <p>设置积分类型、任务领域与属性类别三者之间的对应关系</p>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <h4 title="设置任务领域、属性类别、积分类型之间的对应关系">任务领域、属性类别与积分类型映射表</h4>
+            <button
+              onClick={(e) => showInfoPopup(
+                '💡',
+                '<p>设置任务领域、属性类别、积分类型之间的对应关系</p>',
+                e
+              )}
+              style={{ padding: '2px',background:'transparent',color:'black' }}
+            >
+              ⓘ
+            </button>
+          </div>
+          {/*<small>设置任务领域、属性类别、积分类型之间的对应关系</small>*/}
 
           <table className="field-mapping-table compact">
             <thead>
               <tr>
-                <th style={{ width: '15%' }}>任务领域</th>
-                <th style={{ width: '15%' }}>属性类别</th>
-                <th style={{ width: '10%' }}>属性图标</th>
-                <th style={{ width: '10%' }}>属性颜色</th>
-                <th style={{ width: '15%' }}>积分类型</th>
-                <th style={{ width: '15%' }}>积分图标</th>
+                <th style={{ width: '15%' }} title="【任务】领域字段">任务领域</th>
+                <th style={{ width: '15%' }} title="【面板】角色属性">属性类别</th>
+                <th style={{ width: '10%' }} title="【面板】属性对应的图标">属性图标</th>
+                <th style={{ width: '10%' }} title="【面板】属性卡片颜色">属性颜色</th>
+                <th style={{ width: '15%' }} title="【面板】资源与货币积分">积分类型</th>
+                <th style={{ width: '15%' }} title="【面板】资源与货币积分对应的图标">积分图标</th>
                 <th style={{ width: '10%' }}>操作</th>
               </tr>
             </thead>
@@ -2693,7 +1983,11 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
                         value={item.domain || ''}
                         onChange={(e) => {
                           const newSettings = [...characterSettings];
-                          newSettings[index].domain = e.target.value;
+                          // newSettings[index].domain = e.target.value;
+                          newSettings[index] = {
+                            ...newSettings[index], // 保留现有属性
+                            domain: e.target.value  // 更新 domain
+                          };
                           setLocalSettings({
                             ...localSettings,
                             characterSettings: newSettings
@@ -2847,13 +2141,70 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
 
   // 在 SettingsTab.js 中添加新的状态管理函数
   const updateGmCommands = (newGmCommands) => {
+    // 为新命令分配orderNo（如果不存在）
+    const commandIds = Object.keys(newGmCommands);
+    const commandsWithOrder = { ...newGmCommands };
+
+    commandIds.forEach((id, index) => {
+      if (!newGmCommands[id].orderNo) {
+        commandsWithOrder[id] = {
+          ...newGmCommands[id],
+          orderNo: index + 1
+        };
+      }
+    });
+
     setLocalSettings({
       ...localSettings,
-      gmCommands: newGmCommands
+      gmCommands: commandsWithOrder
     });
+
+    // 保持命令顺序与更新后的命令一致，过滤掉已删除的命令
+    const currentOrder = gmCommandOrder.filter(id => commandsWithOrder[id]);
+    setGmCommandOrder(currentOrder);
   };
 
 
+  // 添加GM命令排序相关函数
+  const moveGmCommand = (fromIndex, toIndex) => {
+    // 获取当前按顺序排列的命令列表
+    const orderedCommandIds = gmCommandOrder.filter(id => localSettings.gmCommands[id]);
+    const updatedOrder = [...orderedCommandIds];
+    const [movedCommand] = updatedOrder.splice(fromIndex, 1);
+    updatedOrder.splice(toIndex, 0, movedCommand);
+
+    // 更新顺序
+    setGmCommandOrder(updatedOrder);
+
+    // 更新每个命令的orderNo字段
+    const updatedGmCommands = { ...localSettings.gmCommands };
+    updatedOrder.forEach((id, index) => {
+      updatedGmCommands[id] = {
+        ...updatedGmCommands[id],
+        orderNo: index + 1
+      };
+    });
+
+    setLocalSettings(prev => ({
+      ...prev,
+      gmCommands: updatedGmCommands
+    }));
+  };
+
+
+  // 新增：向上移动GM命令
+  const moveGmCommandUp = (index) => {
+    if (index > 0) {
+      moveGmCommand(index, index - 1);
+    }
+  };
+
+  // 新增：向下移动GM命令
+  const moveGmCommandDown = (index) => {
+    if (index < gmCommandOrder.length - 1) {
+      moveGmCommand(index, index + 1);
+    }
+  };
 
   // 在 SettingsTab.js 中添加默认游戏世界设置的渲染函数
   const renderDefaultParallelWorldSetting = () => {
@@ -2861,7 +2212,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
 
     return (
       <div className="setting-item inline-setting">
-        <label>默认游戏世界：</label>
+        <label title="【道具】设置默认游戏世界">默认游戏世界：</label>
         <select
           value={localSettings.defaultParallelWorld || worldOptions[0]}
           onChange={(e) => setLocalSettings({
@@ -2878,91 +2229,187 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
   };
 
   // 在 SettingsTab.js 中添加 GM 命令设置渲染函数
-  // 替换 SettingsTab.js 中的 renderGmCommandSettings 函数中的相应部分
-  const renderGmCommandSettings = () => {
+  const renderGmCommandSettings_old = () => {
     const gmCommands = localSettings.gmCommands || {};
 
     // 使用字段设置中的游戏世界选项
     const worldOptions = localSettings.parallelWorlds || ["默认世界", "幻想世界", "科幻世界", "古代世界"];
 
-    // 获取已配置的命令列表
-    const configuredCommands = Object.entries(gmCommands);
+    // 获取已配置的命令列表，按orderNo排序
+    const allCommands = Object.entries(gmCommands);
+    const orderedCommands = allCommands
+      .filter(([id, command]) => command.orderNo !== undefined)
+      .sort((a, b) => (a[1].orderNo || 0) - (b[1].orderNo || 0));
 
+    // 获取每个游戏世界的第一个命令作为默认模板（按orderNo排序）
+    const getDefaultCommandByWorld = (world) => {
+      const worldCommands = allCommands
+        .filter(([id, command]) => command.gameWorld === world)
+        .sort((a, b) => (a[1].orderNo || 0) - (b[1].orderNo || 0));
+
+      return worldCommands.length > 0 ? worldCommands[0][1] : null;
+    };
     return (
       <details className="settings-group">
         <summary className="settings-group-title">【道具】对接游戏世界</summary>
-        <div className="settings-section">
+        <div className="settings-subsection">
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <h4 title="为不同游戏设置GM命令公式，{}内填入任意自定义变量，<>内填入保留变量如数目，第一条为默认模板">游戏世界GM命令模板配置</h4>
+            <button
+              onClick={(e) => showInfoPopup(
+                '💡',
+                '<div><p>为不同游戏世界的道具设置GM命令公式，用于自建游戏服务器中{}内输入自定义变量名，<>内输入保留变量名（保留变量名须含以下任意关键词：count、cnt、num、数量、个数、数目，用于道具使用时替换为使用数量），第一条为默认模板</p><br><p>例1：d_c2scmd 10800 {item} <count> <br>例2：d_c2scmd 10802 {怪物Id} <怪物个数> 0 0</p></div>',
+                e
+              )}
+              style={{background:'transparent',color:'black',padding:'2px' }}
+            >
+              ⓘ
+            </button>
+          </div>
 
-          <h4>游戏世界GM命令模板配置</h4>
-          <p>{'为不同游戏设置GM命令公式，{}内填入任意自定义变量，<>内填入保留变量如数目，第一条为默认模板'}</p>
+          {/* 显示默认模板信息 */}
+          <div className="gm-command-default-info" style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f0f8ff', borderRadius: '4px' }}>
+            <h5>默认模板信息：</h5>
+            {Array.from(new Set(worldOptions)).map(world => {
+              const defaultCommandId = getDefaultCommandByWorld(world);
+              const defaultCommand = defaultCommandId ? gmCommands[defaultCommandId] : null;
+              return (
+                <div key={world} style={{ marginBottom: '5px' }}>
+                  <strong>{world}:</strong> {defaultCommand ? `"${defaultCommand.gmCommand}"` : '无'}
+                </div>
+              );
+            })}
+          </div>
+
           <div className="gm-command-settings">
-            {configuredCommands.map(([id, commandData]) => (
-              <div key={id} className="setting-item inline-setting">
-                <select
-                  value={commandData.gameWorld || ''}
-                  onChange={(e) => {
-                    const newGmCommands = {
-                      ...gmCommands,
-                      [id]: {
-                        ...commandData,
-                        gameWorld: e.target.value
-                      }
-                    };
-                    updateGmCommands(newGmCommands);
-                  }}
-                  style={{ width: '150px', marginRight: '10px' }}
-                >
-                  <option value="">选择游戏世界</option>
-                  {worldOptions.map((option) => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-                <input
-                  type="text"
-                  value={commandData.gmCommand || ''}
-                  onChange={(e) => {
-                    const newGmCommands = {
-                      ...gmCommands,
-                      [id]: {
-                        ...commandData,
-                        gmCommand: e.target.value
-                      }
-                    };
-                    updateGmCommands(newGmCommands);
-                  }}
-                  placeholder="例如: .additem {item} <count>"
-                  style={{ flex: 1, marginRight: '10px' }}
-                />
-                <input
-                  type="text"
-                  value={commandData.description || ''}
-                  onChange={(e) => {
-                    const newGmCommands = {
-                      ...gmCommands,
-                      [id]: {
-                        ...commandData,
-                        description: e.target.value
-                      }
-                    };
-                    updateGmCommands(newGmCommands);
-                  }}
-                  placeholder="用途说明"
-                  style={{ flex: 1, marginRight: '10px' }}
-                />
-                <button
-                  onClick={() => {
-                    const newGmCommands = { ...gmCommands };
-                    delete newGmCommands[id];
-                    updateGmCommands(newGmCommands);
-                  }}
-                  style={{ padding: '5px 10px' }}
-                >
-                  -
-                </button>
+            {orderedCommands.map(([id, commandData], index) => (
+              <div key={id} className="setting-item inline-setting" style={{
+                padding: '10px',
+                margin: '5px 0',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                backgroundColor: index === 0 ? '#e6f7ff' : '#fff' // 高亮第一个命令
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                  <span style={{ fontWeight: 'bold', color: index === 0 ? '#1890ff' : '#666' }}>
+                    {index + 1}. {index === 0 && <span style={{ color: 'red' }}>(默认)</span>}
+                  </span>
+
+                  <select
+                    value={commandData.gameWorld || ''}
+                    onChange={(e) => {
+                      const newGmCommands = {
+                        ...gmCommands,
+                        [id]: {
+                          ...commandData,
+                          gameWorld: e.target.value
+                        }
+                      };
+                      updateGmCommands(newGmCommands);
+                    }}
+                    style={{ width: '15%', marginRight: '5px' }}
+                  >
+                    <option value="">选择游戏世界</option>
+                    {worldOptions.map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+
+                  <div style={{ flex: 1, display: 'flex', gap: '5px' }}>
+                    <input
+                      type="text"
+                      value={commandData.gmCommand || ''}
+                      onChange={(e) => {
+                        const newGmCommands = {
+                          ...gmCommands,
+                          [id]: {
+                            ...commandData,
+                            gmCommand: e.target.value
+                          }
+                        };
+                        updateGmCommands(newGmCommands);
+                      }}
+                      placeholder="例如: .additem {item} <count>"
+                      style={{ flex: 1, marginRight: '5px' }}
+                    />
+                    <input
+                      type="text"
+                      value={commandData.description || ''}
+                      onChange={(e) => {
+                        const newGmCommands = {
+                          ...gmCommands,
+                          [id]: {
+                            ...commandData,
+                            description: e.target.value
+                          }
+                        };
+                        updateGmCommands(newGmCommands);
+                      }}
+                      placeholder="用途说明"
+                      style={{ flex: 1, marginRight: '5px' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '5px' }}>
+                    <button
+                      onClick={() => moveGmCommandUp(index)}
+                      style={{
+                        padding: '4px 8px',
+                        background: 'none',
+                        color: 'black',
+                        border: '1px solid #ddd',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                      title="向上移动"
+                      disabled={index === 0}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      onClick={() => moveGmCommandDown(index)}
+                      style={{
+                        padding: '4px 8px',
+                        background: 'none',
+                        color: 'black',
+                        border: '1px solid #ddd',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                      title="向下移动"
+                      disabled={index === orderedCommands.length - 1}
+                    >
+                      ↓
+                    </button>
+                    <button
+                      onClick={() => {
+                        const newGmCommands = { ...gmCommands };
+                        delete newGmCommands[id];
+                        updateGmCommands(newGmCommands);
+
+                        // 更新命令顺序
+                        const newOrder = gmCommandOrder.filter(cmdId => cmdId !== id);
+                        setGmCommandOrder(newOrder);
+                      }}
+                      style={{
+                        padding: '4px 8px',
+                        background: '#ff4d4f',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '3px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      删除
+                    </button>
+                  </div>
+                </div>
               </div>
             ))}
 
-            <div className="setting-item">
+            <div className="setting-item" style={{ textAlign: 'left', alignItems: 'left' }}>
               <button
                 onClick={() => {
                   // 生成唯一ID（使用当前时间戳）
@@ -2976,17 +2423,270 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
                     }
                   };
                   updateGmCommands(newGmCommands);
+
+                  // 更新命令顺序
+                  setGmCommandOrder(prev => [...prev, newId]);
                 }}
-                style={{ padding: '5px 10px', marginTop: '10px' }}
+                style={{ padding: '8px 16px', marginTop: '10px' }}
               >
-                添加游戏世界配置
+                + 添加模板
               </button>
+
             </div>
           </div>
         </div>
       </details>
     );
   };
+
+
+
+  const renderGmCommandSettings = () => {
+    const gmCommands = localSettings.gmCommands || {};
+    const isMobile = window.innerWidth <= 768;
+    // 使用字段设置中的游戏世界选项
+    const worldOptions = localSettings.parallelWorlds || ["默认世界", "幻想世界", "科幻世界", "古代世界"];
+
+    // 获取已配置的命令列表，按orderNo排序
+    const allCommands = Object.entries(gmCommands);
+    const orderedCommands = allCommands
+      .filter(([id, command]) => command.orderNo !== undefined)
+      .sort((a, b) => (a[1].orderNo || 0) - (b[1].orderNo || 0));
+
+    // 获取每个游戏世界中orderNo最小的命令ID
+    const getWorldDefaultCommandId = () => {
+      const worldDefaults = {};
+
+      allCommands.forEach(([id, command]) => {
+        if (command.gameWorld) {
+          if (!worldDefaults[command.gameWorld] ||
+              command.orderNo < gmCommands[worldDefaults[command.gameWorld]].orderNo) {
+            worldDefaults[command.gameWorld] = id;
+          }
+        }
+      });
+
+      return worldDefaults;
+    };
+
+    const worldDefaultCommands = getWorldDefaultCommandId();
+
+    // 获取每个游戏世界的第一个命令作为默认模板（按orderNo排序）
+    const getDefaultCommandByWorld = (world) => {
+      const worldCommands = allCommands
+        .filter(([id, command]) => command.gameWorld === world)
+        .sort((a, b) => (a[1].orderNo || 0) - (b[1].orderNo || 0));
+
+      return worldCommands.length > 0 ? worldCommands[0][1] : null;
+    };
+
+
+
+    return (
+      <details className="settings-group">
+        <summary className="settings-group-title">【道具】对接游戏世界</summary>
+        <div className="settings-subsection">
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <h4>游戏世界GM命令模板配置</h4>
+            <button
+              onClick={(e) => showInfoPopup(
+                '💡',
+                '<div><h4>GM命令模板配置说明</h4>' +
+                  '<p>GM命令模板用于【道具】模块中为各道具生成GM命令，【背包】中使用道具可复制对应GM命令，用于在具有GM权限的游戏终端中生成对应道具。</p> ' +
+                  '<p>带*号标记的GM命令模板属于默认模板，无须选择模板来生成GM命令的场景中将使用默认模板。</p>' +
+                  '<p>GM命令模板中{}内填入任意变量名，对应【道具】模块中"道具ID"字段；<>内填入保留变量名，保留在生成的GM命令中，在【背包】中使用道具时解释为使用数量（保留变量名可使用包含以下任意关键词的字符串：count、cnt、num、数量、个数、数目）。</p> ' +
+                  '<p>例1：cmd 10800 {item} &lt;item数目&gt;（生成指定数目的对应道具） <br>例2：cmd 10802 {怪物Id} <怪物个数> 0 0（生成指定数目的对应怪物）</p></div>',
+                e
+              )}
+              style={{background:'transparent',color:'black',padding:'2px' }}
+            >
+              ⓘ
+            </button>
+          </div>
+
+          {/*/!* 显示默认模板信息 *!/*/}
+          {/*<div className="gm-command-default-info" style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f0f8ff', borderRadius: '4px' }}>*/}
+          {/*  <h5>默认模板信息：</h5>*/}
+          {/*  {Array.from(new Set(worldOptions)).map(world => {*/}
+          {/*    const defaultCommand = getDefaultCommandByWorld(world);*/}
+          {/*    return (*/}
+          {/*      <div key={world} style={{ marginBottom: '5px' }}>*/}
+          {/*        <strong>{world}:</strong> {defaultCommand ? `"${defaultCommand.gmCommand}"` : '无'}*/}
+          {/*      </div>*/}
+          {/*    );*/}
+          {/*  })}*/}
+          {/*</div>*/}
+
+          <div className="gm-command-settings">
+            {orderedCommands.map(([id, commandData], index) => {
+              // 检查当前命令是否是其所在游戏世界的默认命令
+              const isDefaultForWorld = worldDefaultCommands[commandData.gameWorld] === id;
+
+              return (
+                <div key={id} className="setting-item inline-setting" style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  width: '100%',
+                  padding: '5px',
+                  margin: '5px 0',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  backgroundColor: isDefaultForWorld ? '#e6f7ff' : '#fff' // 高亮默认命令
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1px', marginBottom: '5px' }}>
+                    <span style={{ fontWeight: 'bold', color: isDefaultForWorld ? '#1890ff' : '#666' }}>
+                      {isDefaultForWorld && <span style={{ color: 'red' }}>*</span>}{index + 1}.
+                    </span>
+
+                    <select
+                      value={commandData.gameWorld || ''}
+                      onChange={(e) => {
+                        const newGmCommands = {
+                          ...gmCommands,
+                          [id]: {
+                            ...commandData,
+                            gameWorld: e.target.value
+                          }
+                        };
+                        updateGmCommands(newGmCommands);
+                      }}
+                      style={{ width: isMobile ? '60px' :'120px', marginRight: '5px' }}
+                    >
+                      <option value="">选择游戏世界</option>
+                      {worldOptions.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+
+                    <input
+                      type="text"
+                      className="gm-command-input"
+                      value={commandData.gmCommand || ''}
+                      onChange={(e) => {
+                        const newGmCommands = {
+                          ...gmCommands,
+                          [id]: {
+                            ...commandData,
+                            gmCommand: e.target.value
+                          }
+                        };
+                        updateGmCommands(newGmCommands);
+                      }}
+                      placeholder="例如: .additem {item} <count>"
+                      style={{ width: isMobile ? '100px' :'250px', flex: 1, marginRight: '5px' }}
+                    />
+                    <input
+                      type="text"
+                      className="gm-description-input"
+                      value={commandData.description || ''}
+                      onChange={(e) => {
+                        const newGmCommands = {
+                          ...gmCommands,
+                          [id]: {
+                            ...commandData,
+                            description: e.target.value
+                          }
+                        };
+                        updateGmCommands(newGmCommands);
+                      }}
+                      placeholder="用途说明"
+                      style={{ width: isMobile ? '80px' :'160px', flex: 1, marginRight: '5px' }}
+                    />
+
+                    <div style={{ display: 'flex', gap: '1px' }}>
+                      <button
+                        onClick={() => moveGmCommandUp(index)}
+                        style={{
+                          padding: '1px 1px',
+                          background: 'none',
+                          color: 'black',
+                          border: '1px solid #ddd',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                        title="向上移动"
+                        disabled={index === 0}
+                      >
+                        ◢
+                      </button>
+                      <button
+                        onClick={() => moveGmCommandDown(index)}
+                        style={{
+                          padding: '1px 1px',
+                          background: 'none',
+                          color: 'black',
+                          border: '1px solid #ddd',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          minWidth: '1px'
+                        }}
+                        title="向下移动"
+                        disabled={index === orderedCommands.length - 1}
+                      >
+                        ◤
+                      </button>
+                      <button
+                        onClick={() => {
+                          const newGmCommands = { ...gmCommands };
+                          delete newGmCommands[id];
+                          updateGmCommands(newGmCommands);
+
+                          // 更新命令顺序
+                          const newOrder = gmCommandOrder.filter(cmdId => cmdId !== id);
+                          setGmCommandOrder(newOrder);
+                        }}
+                        style={{
+                          padding: '2px 2px',
+                          background: '#ff4d4f',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '3px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            <div className="setting-item" style={{ textAlign: 'left', alignItems: 'left' }}>
+              <button
+                onClick={() => {
+                  // 生成唯一ID（使用当前时间戳）
+                  const newId = Date.now().toString();
+                  const newGmCommands = {
+                    ...gmCommands,
+                    [newId]: {
+                      gameWorld: localSettings.defaultParallelWorld || worldOptions[0] || "", // 使用默认游戏世界
+                      gmCommand: "",
+                      description: "",
+                      orderNo: Object.keys(gmCommands).length + 1 // 为新命令设置orderNo
+                    }
+                  };
+                  updateGmCommands(newGmCommands);
+
+                  // 更新命令顺序
+                  setGmCommandOrder(prev => [...prev, newId]);
+                }}
+                style={{ padding: '8px 16px', marginTop: '5px' }}
+              >
+                + 添加模板
+              </button>
+
+            </div>
+          </div>
+        </div>
+      </details>
+    );
+  };
+
+
+
 
 
   // 添加更新售出比率的函数
@@ -3028,10 +2728,26 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
           data.push(item);
         }
 
+
         // 根据数据类型设置不同的格式
         if (headers.includes('起始等级') && headers.includes('结束等级') && headers.includes('境界')) {
           setter(data);
+          // 如果是更新属性境界数据，强制触发重新渲染
+          if (setter === setPropertyToRealm) {
+            setLocalSettings(prev => ({
+              ...prev,
+              propertyToRealm: data
+            }));
+          } else if (setter === setLevelToRealm) {
+            setLocalSettings(prev => ({
+              ...prev,
+              levelToRealm: data
+            }));
+          }
+
+          // onUpdateSettings();
         }
+
       } catch (error) {
         alert('文件解析失败，请检查CSV格式是否正确');
       }
@@ -3046,14 +2762,31 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
 
     return (
       <details className="settings-group">
-        <summary className="settings-group-title">【面板】角色属性境界</summary>
+        <summary className="settings-group-title">【面板】角色境界</summary>
 
-        <div className="settings-section">
-          <h4>经验境界配置</h4>
-          <p>读取CSV文件以配置经验等级对应的境界数据<br></br>CSV文件抬头：起始等级、结束等级、境界、描述</p>
+        <div className="settings-subsection">
 
-          <div className="setting-item" style={{ display: 'flex', alignItems: 'center'}}>
-            <label>经验境界CSV文件：</label>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <h4>角色经验境界</h4>
+            <button
+              onClick={(e) => showInfoPopup(
+                '💡',
+                '<div><h4>导入经验境界：</h4> <p>通过从CSV文件导入经验等级与对应境界的数据以配置经验境界<br></br>CSV文件抬头：起始等级、结束等级、境界、描述</p></div>',
+                e
+              )}
+              style={{background:'transparent',color:'black',padding:'2px' }}
+            >
+              ⓘ
+            </button>
+          </div>
+
+
+
+          {/*<h4>经验境界</h4>*/}
+          {/*<p>读取CSV文件以配置经验等级对应的境界数据<br></br>CSV文件抬头：起始等级、结束等级、境界、描述</p>*/}
+
+          <div className="realm-setting-item" style={{ display: 'flex', alignItems: 'center'}}>
+            <label>导入经验境界CSV：</label>
             <input
               type="file"
               accept=".csv"
@@ -3065,7 +2798,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
           {/* 显示当前境界配置的预览 */}
           {currentLevelToRealm.length > 0 && (
             <div className="setting-item">
-              <h4>境界配置预览</h4>
+              {/*<h4>经验境界对照表</h4>*/}
               <div className="realm-preview">
                 {renderRealmPreview(currentLevelToRealm)}
               </div>
@@ -3086,14 +2819,16 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
               }
             }}
             style={{
-              border: '1px solid #ccc',
+              background: 'none',
+              color: '#333',
+              // border: '1px solid #ccc',
               padding: '5px 15px',
               borderRadius: '4px',
               cursor: 'pointer',
               fontSize: '14px'
             }}
           >
-            收起
+            ▲
           </button>
         </div>
       </details>
@@ -3136,8 +2871,77 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
   const renderRealmPreview = (realmData) => {
     if (!realmData || realmData.length === 0) return null;
 
-    // 只显示前5条数据
-    const firstFive = realmData.slice(0, 5);
+    // 获取当前等级，如果 stats.level 不存在则使用默认值 1
+    const currentLevel = stats?.level || 1;
+
+    // 找到当前等级对应的境界索引
+    const currentRealmIndex = realmData.findIndex(item => {
+      const start = parseInt(item['起始等级'], 10);
+      const end = parseInt(item['结束等级'], 10);
+      return currentLevel >= start && currentLevel <= end;
+    });
+
+    // 确定要显示的范围（当前境界及其前后项，确保总共显示5项）
+    let startIndex, endIndex;
+
+    if (currentRealmIndex !== -1) {
+      // 如果找到了当前境界
+      // 计算初始范围：当前项为中心，前后各2项
+      startIndex = Math.max(0, currentRealmIndex - 2);
+      endIndex = Math.min(realmData.length - 1, currentRealmIndex + 2);
+
+      // 计算当前范围内的项目数量
+      const currentRangeCount = endIndex - startIndex + 1;
+
+      // 如果项目数量不足5个，需要扩展范围
+      if (currentRangeCount < 5) {
+        // 计算还需要多少个项目
+        const neededItems = 5 - currentRangeCount;
+
+        // 优先扩展到前面
+        const possibleToAddToStart = Math.max(0, startIndex);
+        const addToStart = Math.min(neededItems, possibleToAddToStart);
+
+        // 更新 startIndex
+        startIndex = startIndex - addToStart;
+
+        // 如果还需要更多项目，扩展到后面
+        const remainingNeeded = neededItems - addToStart;
+        if (remainingNeeded > 0) {
+          const possibleToAddToEnd = Math.max(0, realmData.length - 1 - endIndex);
+          const addToEnd = Math.min(remainingNeeded, possibleToAddToEnd);
+
+          endIndex = endIndex + addToEnd;
+        }
+
+        // 如果仍然不足5个且还有空间，进一步扩展
+        const finalRangeCount = endIndex - startIndex + 1;
+        if (finalRangeCount < 5) {
+          const additionalNeeded = 5 - finalRangeCount;
+
+          // 尝试从前面再添加
+          if (startIndex > 0) {
+            const canAddToStart = Math.min(additionalNeeded, startIndex);
+            startIndex = startIndex - canAddToStart;
+          }
+
+          // 如果仍然不足，从后面添加
+          if (startIndex === 0) {
+            const stillNeeded = 5 - (endIndex - startIndex + 1);
+            if (stillNeeded > 0) {
+              endIndex = Math.min(realmData.length - 1, endIndex + stillNeeded);
+            }
+          }
+        }
+      }
+    } else {
+      // 如果当前等级没有对应境界，显示前5项
+      startIndex = 0;
+      endIndex = Math.min(4, realmData.length - 1);
+    }
+
+    // 提取要显示的数据
+    const displayedData = realmData.slice(startIndex, endIndex + 1);
 
     return (
       <div>
@@ -3150,35 +2954,35 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
             </tr>
           </thead>
           <tbody style={{fontSize: '14px'}}>
-            {firstFive.map((item, index) => (
-              <tr key={index}>
-                <td>{item['起始等级']}</td>
-                <td>{item['境界']}</td>
-                <td>{item['描述']}</td>
-              </tr>
-            ))}
+            {displayedData.map((item, index) => {
+              const actualIndex = startIndex + index;
+              const isCurrentRealm = actualIndex === currentRealmIndex;
+
+              return (
+                <tr
+                  key={actualIndex}
+                  style={isCurrentRealm ? { backgroundColor: '#e6f7ff', fontWeight: 'bold' } : {}}
+                >
+                  <td>{item['起始等级']}</td>
+                  <td>{item['境界']}</td>
+                  <td>{item['描述']}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 
         {/* 如果数据超过5条，显示"更多"按钮 */}
         {realmData.length > 5 && (
-          <div style={{ textAlign: 'center', padding: '10px' }}>
+          <div className="realm-setting-item" style={{ textAlign: 'center', padding: '1px' }}>
             <button
               onClick={() => {
                 setRealmModalData(realmData);
-                setRealmModalTitle('经验境界配置');
+                setRealmModalTitle('经验境界一览表');
                 setShowRealmModal(true);
               }}
-              style={{
-                fontSize: '14px',
-                background: '#bab5b5',
-                border: '1px solid #ccc',
-                padding: '5px 10px',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
             >
-              显示全部 {realmData.length} 个境界配置
+              查看全部 {realmData.length} 项
             </button>
           </div>
         )}
@@ -3191,28 +2995,37 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
     const currentPropertyToRealm = localSettings.propertyToRealm || propertyToRealm || [];
 
     return (
-      <div className="settings-section">
-          <h4>属性境界配置</h4>
-          <p>读取CSV文件以配置属性等级对应的境界数据 <br></br>CSV文件抬头：领域、起始等级、结束等级、境界、描述</p>
+      <div className="settings-subsection">
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <h4 title="">角色属性境界</h4>
+            <button
+              onClick={(e) => showInfoPopup(
+                '💡',
+                '<div><h4>导入属性境界：</h4> <p>通过从CSV文件导入属性等级与对应境界的数据以配置属性境界 <br></br>CSV文件抬头：领域、起始等级、结束等级、境界、描述</p> <p>若任务领域字段有变动，可能须修改境界csv文件并重新导入</p></div>',
+                e
+              )}
+              style={{background:'transparent',color:'black',padding:'2px' }}
+            >
+              ⓘ
+            </button>
+          </div>
 
-          <div className="setting-item" style={{ display: 'flex', alignItems: 'center'}}>
-            <label>属性境界CSV文件：</label>
+          {/*<h4>属性境界配置</h4>*/}
+          {/*<p>读取CSV文件以配置属性等级对应的境界数据 <br></br>CSV文件抬头：领域、起始等级、结束等级、境界、描述</p>*/}
+
+          <div className="realm-setting-item" style={{ display: 'flex', alignItems: 'center'}}>
+            <label>导入属性境界CSV：</label>
             <input
               type="file"
               accept=".csv"
-              style={{ flex:1, marginLeft: '10px'}}
+              style={{ flex:1, marginLeft: '2px'}}
               onChange={(e) => handleFileUpload(e, setPropertyToRealm)}
             />
           </div>
 
           {/* 显示当前属性境界配置的预览 */}
           {currentPropertyToRealm.length > 0 && (
-            <div className="setting-item">
-              <h4>属性境界配置预览</h4>
-              <div className="realm-preview">
-                {renderPropertyRealmPreview(currentPropertyToRealm)}
-              </div>
-            </div>
+            renderPropertyRealmPreview(currentPropertyToRealm)
           )}
         </div>
     );
@@ -3221,6 +3034,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
   // 属性境界预览渲染函数
   const renderPropertyRealmPreview = (realmData) => {
     if (!realmData || realmData.length === 0) return null;
+    const safeCharacterSettings = localSettings.characterSettings || [];
 
     // 按属性类别分组
     const groupedData = {};
@@ -3235,52 +3049,31 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
     const categories = Object.keys(groupedData);
 
     return (
-      <div>
+      <div className="realm-setting-group">
         {categories.map(category => {
           const categoryData = groupedData[category];
 
+          const propertyCategory = localSettings.characterSettings?.find(item => item.domain === category)?.propertyCategory || null;
+
           return (
-            <div key={category} style={{ fontSize: '14px', marginBottom: '20px' }}>
-              <h3>{category}</h3>
-              {/* 只显示前5条数据 */}
-              <table className="realm-table">
-                <thead>
-                  <tr>
-                    <th>起始<br></br>等级</th>
-                    <th>境界</th>
-                    <th>描述</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {categoryData.slice(0, 5).map((item, index) => (
-                    <tr key={index}>
-                      <td>{item['起始等级']}</td>
-                      <td>{item['境界']}</td>
-                      <td>{item['描述']}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div key={category} style={{  fontSize: '12px', marginBottom: '5px' }}>
+
 
               {/* 如果数据超过5条，显示"更多"按钮 */}
               {categoryData.length > 5 && (
-                <div style={{ textAlign: 'center', padding: '10px' }}>
+                <div className="realm-setting-item" style={{ textAlign: 'center', padding: '1px' }}>
                   <button
                     onClick={() => {
                       setRealmModalData(categoryData);
-                      setRealmModalTitle(`属性境界配置 - ${category}`);
+                      setRealmModalTitle(`${propertyCategory}(${category})属性境界一览表`);
                       setShowRealmModal(true);
                     }}
                     style={{
-                      background: '#bab5b5',
-                      fontSize: '14px',
-                      border: '1px solid #ccc',
-                      padding: '5px 10px',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
+                      padding: '1px 5px',
                     }}
                   >
-                    显示全部 {categoryData.length} 个境界配置
+                    <h4>{propertyCategory}<br></br>({category})</h4>
+                    {/*显示全部 {categoryData.length} 个境界配置*/}
                   </button>
                 </div>
               )}
@@ -3340,7 +3133,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
           className="edit-credit-modal"
           style={{ maxWidth: '800px', maxHeight: '80vh', overflow: 'auto' }}
         >
-          <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between',  }}>
             <h4>{realmModalTitle}</h4>
             <button
               className="modal-close-button"
@@ -3355,7 +3148,11 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
                 display: 'flex',
                 fontSize: '14px',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                position: 'absolute',  // 添加绝对定位
+                top: '10px',          // 距离顶部10px
+                right: '10px',        // 距离右侧10px
+                zIndex: 1001          // 确保在模态框上层
               }}
             >
               <img
@@ -3605,9 +3402,9 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
   };
 
 
-
-
-
+  // console.log('permissions: ', currentUserProfile.permissions)
+  // console.log("logging permissions: ", currentUserProfile.permissions.includes('admin'))
+  //
 
   // 添加处理完整配置粘贴的函数
   const handlePasteFullConfig = () => {
@@ -3796,8 +3593,8 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
                     }}
                     style={{
                       padding: '2px 8px',
-                      backgroundColor: '#2196F3',
-                      color: 'white',
+                      background: 'none',
+                      color: 'black',
                       border: 'none',
                       borderRadius: '3px',
                       cursor: 'pointer',
@@ -3806,7 +3603,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
                     title="向前移动"
                     disabled={index === 0}
                   >
-                    -
+                    ◢
                   </button>
                   <button
                     onClick={(e) => {
@@ -3815,8 +3612,8 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
                     }}
                     style={{
                       padding: '2px 8px',
-                      backgroundColor: '#2196F3',
-                      color: 'white',
+                      background: 'none',
+                      color: 'black',
                       border: 'none',
                       borderRadius: '3px',
                       cursor: 'pointer',
@@ -3825,7 +3622,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
                     title="向后移动"
                     disabled={index === modules.length - 1}
                   >
-                    +
+                    ◤
                   </button>
                 </div>
               </li>
@@ -3837,14 +3634,13 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
 
   const [isModuleOrderExpanded, setIsModuleOrderExpanded] = useState(false);
   const renderGeneralSettings = () => {
-    console.log('pathname: ',location.pathname)
     return (
       // {/* 使用折叠面板来组织默认显示设置 */}
       <details className="settings-group">
         <summary className="settings-group-title">常规</summary>
         <div className="settings-section">
           <div className="setting-item inline-setting">
-            <label>默认首页：</label>
+            <label title='设置默认首页，当用户访问网站时，将自动跳转到该页面'>默认首页：</label>
             <select
               value={localSettings.defaultHomePage}
               onChange={(e) => setLocalSettings({
@@ -3865,7 +3661,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
           </div>
           <div className="setting-item-left-aligned">
             <label title='启用后在所有页面显示一个悬浮按钮，可用于隐藏导航栏和顶部控件'>
-              <span>是否启用悬浮按钮：</span>
+              <span>启用悬浮按钮：</span>
               <input
                 type="checkbox"
                 checked={localSettings.enableFloatingControlButton || false}
@@ -3880,10 +3676,10 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
 
           {/* 添加允许手动编辑积分值的配置项 */}
 
-          {((location.pathname === '/character') || (location.pathname === '/options')) && (
+          {isAdmin && ((location.pathname === '/character') || (location.pathname === '/options')) && (
             <div className="setting-item-left-aligned">
-              <label title="开启后在【面板】页面中可点击积分卡片右上角编辑按钮以修改积分值">
-                <span>是否开启积分值编辑：  </span>
+              <label title="开启后在【面板】页面中可点击资源积分卡片右上角编辑按钮以直接修改积分值">
+                <span>允许编辑积分值：  </span>
                 <input
                   type="checkbox"
                   checked={localSettings.allowManualCreditEditing ?? true}
@@ -3910,7 +3706,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
               {/*  />*/}
               {/*</label>              */}
               <label title='启用后在【道具】中“积分定价”字段可使用资源积分类型来定价'>
-                <span>是否启用资源积分定价：</span>
+                <span>启用资源积分定价：</span>
                 <input
                   type="checkbox"
                   checked={localSettings.enableAllCreditsPricing || false}
@@ -3945,7 +3741,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
           {/* 添加快速添加任务的提示文本配置项 */}
           {((location.pathname === '/tasksys') || (location.pathname === '/notes') || (location.pathname === '/options')) && (
             <div className="setting-item inline-setting">
-              <label title="快速添加任务时参考的提示文本">快速添加任务提示文本：</label>
+              <label title="【任务/笔记】快速添加任务时供参考的速配代码提示文本">快速添加任务提示文本：</label>
               <input
                 type="text"
                 value={localSettings.quickAddTaskHint || ''}
@@ -3961,7 +3757,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
 
           {((location.pathname === '/notes') || (location.pathname === '/options')) && (
             <div className="setting-item inline-setting">
-              <label>笔记自动保存间隔（秒）：</label>
+              <label title="【笔记】自动保存间隔时间">笔记自动保存间隔（秒）：</label>
               <input
                 type="number"
                 min="5"
@@ -3979,7 +3775,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
 
           {((location.pathname === '/notes') || (location.pathname === '/options')) && (
             <div className="setting-item inline-setting">
-              <label title="用于补全图片文件的完整路径，避免因路径问题导致的图片加载失败">自定义图床域名：</label>
+              <label title="【笔记】用于补全图片文件的完整路径，避免因路径问题导致的图片加载失败">自定义图床域名：</label>
               <input
                 type="text"
                 value={localSettings.customDomain || ''}
@@ -3995,7 +3791,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
 
           {(location.pathname === '/options') && (
             <div style={{ display: 'flex', alignItems: 'left', justifyContent: 'left' }}>
-              <h>导航栏模块排序:</h>
+              <span title="设置顶部导航栏中模块顺序">导航栏模块排序:</span>
               <button
                 onClick={() => setIsModuleOrderExpanded(!isModuleOrderExpanded)}
                 style={{ background: 'transparent', color:'black', marginLeft: '10px',flex:1,margin:0, }}
@@ -4016,6 +3812,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
     return (
       <details className="settings-group">
         <summary className="settings-group-title">字段配置</summary>
+        {/*<div><small style={{textAlign:'left',alignItems:'left',color: '#666', fontStyle: 'italic' }}>以下可自定义核心字段，请谨慎修改</small></div>*/}
 
         <div className="settings-section">
           <h4>【面板】积分类型</h4>
@@ -4035,6 +3832,12 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
               </div>
             ))}
             <button onClick={() => addNewItem(localSettings.creditTypes, updateCreditTypes)}>+</button>
+          </div>
+          {/* 添加说明文字 */}
+          <div className="setting-item" style={{textAlign:'left',alignItems:'left'}}>
+            <small style={{ color: '#666', fontStyle: 'italic' }}>
+              注：最后两项视为货币类积分，其余为资源类积分
+            </small>
           </div>
         </div>
 
@@ -4079,24 +3882,51 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
           </div>
         </div>
 
+
         <div className="settings-section">
           <h4>【商店】道具类别</h4>
           <div className="compact-list-editor">
-            {localSettings.itemCategories.map((category, index) => (
-              <div key={index} className="compact-list-item">
-                <input
-                  type="text"
-                  value={category}
-                  onChange={(e) => {
-                    const newCategories = [...localSettings.itemCategories];
-                    newCategories[index] = e.target.value;
-                    updateItemCategories(newCategories);
-                  }}
-                />
-                <button onClick={() => removeItem(localSettings.itemCategories, updateItemCategories, category)}>-</button>
-              </div>
-            ))}
+            {localSettings.itemCategories.map((category, index) => {
+              // 定义不可变更的选项
+              const immutableCategories = ['实物类', '宝箱类'];
+              const isImmutable = immutableCategories.includes(category);
+
+              return (
+                <div key={index} className="compact-list-item">
+                  <input
+                    type="text"
+                    value={category}
+                    onChange={(e) => {
+                      const newCategories = [...localSettings.itemCategories];
+                      newCategories[index] = e.target.value;
+                      updateItemCategories(newCategories);
+                    }}
+                    // 对于不可变更的选项，禁用输入框
+                    disabled={isImmutable}
+                    style={isImmutable ? { backgroundColor: '#f0f0f0', cursor: 'not-allowed' } : {}}
+                  />
+                  {/* 对于不可变更的选项，隐藏删除按钮 */}
+                  {!isImmutable && (
+                    <button
+                      onClick={() => removeItem(localSettings.itemCategories, updateItemCategories, category)}
+                    >
+                      -
+                    </button>
+                  )}
+                  {isImmutable && (
+                    <span title="此选项为系统默认，不可删除">🔒</span>
+                  )}
+                </div>
+              );
+            })}
             <button onClick={() => addNewItem(localSettings.itemCategories, updateItemCategories)}>+</button>
+          </div>
+
+          {/* 添加说明文字 */}
+          <div className="setting-item" style={{textAlign:'left',alignItems:'left'}}>
+            <small style={{ color: '#666', fontStyle: 'italic' }}>
+              注：标记为🔒的选项为系统默认选项，不可编辑或删除
+            </small>
           </div>
         </div>
 
@@ -4184,71 +4014,97 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
           </div>
         </div>
 
-        <div className="settings-section">
-          <h4>【任务】优先级</h4>
-          <div className="compact-list-editor">
-            {localSettings.taskPriorities.map((priority, index) => (
-              <div key={index} className="compact-list-item">
-                <input
-                  type="text"
-                  value={priority}
-                  onChange={(e) => {
-                    const newPriorities = [...localSettings.taskPriorities];
-                    newPriorities[index] = e.target.value;
-                    updateTaskPriorities(newPriorities);
-                  }}
-                  disabled
-                />
-                <button onClick={() => removeItem(localSettings.taskPriorities, updateTaskPriorities, priority)} disabled>-</button>
-              </div>
-            ))}
-            <button onClick={() => addNewItem(localSettings.taskPriorities, updateTaskPriorities)} disabled>+</button>
-          </div>
+
+        <div className="setting-item" style={{ display: 'flex',  alignItems: 'center' }}>
+          <small style={{ color: '#666', fontStyle: 'italic' }}>
+            注：以下为系统默认字段配置，不可编辑或删除
+          </small>
+          <button
+            onClick={() => setShowDefaultSections(!showDefaultSections)}
+            style={{
+              background: 'none',
+              color: '#666',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              padding: '2px 8px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            {showDefaultSections ? '▲' : '▼'}
+          </button>
         </div>
 
-        <div className="settings-section">
-          <h4>【任务】循环周期</h4>
-          <div className="compact-list-editor">
-            {localSettings.taskCycleTypes && localSettings.taskCycleTypes.map((cycleType, index) => (
-              <div key={index} className="compact-list-item">
-                <input
-                  type="text"
-                  value={cycleType}
-                  onChange={(e) => {
-                    const newCycleTypes = [...localSettings.taskCycleTypes];
-                    newCycleTypes[index] = e.target.value;
-                    updateTaskCycleTypes(newCycleTypes);
-                  }}
-                  disabled
-                />
-                <button onClick={() => removeItem(localSettings.taskCycleTypes, updateTaskCycleTypes, cycleType)} disabled>-</button>
+        {showDefaultSections && (
+          <>
+            <div className="settings-section">
+              <h4>【任务】优先级</h4>
+              <div className="compact-list-editor">
+                {localSettings.taskPriorities.map((priority, index) => (
+                  <div key={index} className="compact-list-item">
+                    <input
+                      type="text"
+                      value={priority}
+                      onChange={(e) => {
+                        const newPriorities = [...localSettings.taskPriorities];
+                        newPriorities[index] = e.target.value;
+                        updateTaskPriorities(newPriorities);
+                      }}
+                      disabled
+                    />
+                    <button onClick={() => removeItem(localSettings.taskPriorities, updateTaskPriorities, priority)} disabled>-</button>
+                  </div>
+                ))}
+                <button onClick={() => addNewItem(localSettings.taskPriorities, updateTaskPriorities)} disabled>+</button>
               </div>
-            ))}
-            <button onClick={() => addNewItem(localSettings.taskCycleTypes || [], updateTaskCycleTypes)} disabled>+</button>
-          </div>
-        </div>
+            </div>
 
-        <div className="settings-section">
-          <h4>【任务】状态</h4>
-          <div className="compact-list-editor">
-            {localSettings.taskStatuses.map((status, index) => (
-              <div key={index} className="compact-list-item">
-                <input
-                  type="text"
-                  value={status}
-                  onChange={(e) => {
-                    const newStatuses = [...localSettings.taskStatuses];
-                    newStatuses[index] = e.target.value;
-                    updateTaskStatuses(newStatuses);
-                  }}
-                  disabled
-                />
-                <button onClick={() => removeItem(localSettings.taskStatuses, updateTaskStatuses, status)} disabled>-</button>
+            <div className="settings-section">
+              <h4>【任务】循环周期</h4>
+              <div className="compact-list-editor">
+                {localSettings.taskCycleTypes && localSettings.taskCycleTypes.map((cycleType, index) => (
+                  <div key={index} className="compact-list-item">
+                    <input
+                      type="text"
+                      value={cycleType}
+                      onChange={(e) => {
+                        const newCycleTypes = [...localSettings.taskCycleTypes];
+                        newCycleTypes[index] = e.target.value;
+                        updateTaskCycleTypes(newCycleTypes);
+                      }}
+                      disabled
+                    />
+                    <button onClick={() => removeItem(localSettings.taskCycleTypes, updateTaskCycleTypes, cycleType)} disabled>-</button>
+                  </div>
+                ))}
+                <button onClick={() => addNewItem(localSettings.taskCycleTypes || [], updateTaskCycleTypes)} disabled>+</button>
               </div>
-            ))}
-            <button onClick={() => addNewItem(localSettings.taskStatuses, updateTaskStatuses)} disabled>+</button>
-          </div>
-        </div>
+            </div>
+
+            <div className="settings-section">
+              <h4>【任务】状态</h4>
+              <div className="compact-list-editor">
+                {localSettings.taskStatuses.map((status, index) => (
+                  <div key={index} className="compact-list-item">
+                    <input
+                      type="text"
+                      value={status}
+                      onChange={(e) => {
+                        const newStatuses = [...localSettings.taskStatuses];
+                        newStatuses[index] = e.target.value;
+                        updateTaskStatuses(newStatuses);
+                      }}
+                      disabled
+                    />
+                    <button onClick={() => removeItem(localSettings.taskStatuses, updateTaskStatuses, status)} disabled>-</button>
+                  </div>
+                ))}
+                <button onClick={() => addNewItem(localSettings.taskStatuses, updateTaskStatuses)} disabled>+</button>
+              </div>
+            </div>
+          </>
+        )}
+
       </details>
     )
   }
@@ -4256,6 +4112,8 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
     return (
       <details className="settings-group">
         <summary className="settings-group-title">【面板】经验等级公式</summary>
+
+
         <div className="setting-item-left-aligned">
           <label title='启用后【设置】中将显示“经验等级公式”用于编辑公式'>允许编辑经验公式：</label>
           <input
@@ -4269,9 +4127,22 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
         </div>
 
         {localSettings.allowFormulasEditing && <div>
-          <div className="settings-subsection">
-            <h4>角色等级经验公式</h4>
-            <p title="角色等级所需经验值 = 系数 × 等级^指数">LevelExp = a * Level^n</p>
+          <div className="settings-subsection-div">
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <h4 title="">角色等级经验公式</h4>
+              <button
+                onClick={(e) => showInfoPopup(
+                  '💡',
+                  '<div><h4>角色等级经验公式：</h4> <p>LevelExp = a * Level^n <br>角色等级所需经验值 = 系数 × 等级^指数</p></div>',
+                  e
+                )}
+                style={{background:'transparent',color:'black',padding:'2px' }}
+              >
+                ⓘ
+              </button>
+            </div>
+
+            <label title="角色等级所需经验值 = 系数 × 等级^指数">LevelExp = a * Level^n</label>
             <div className="formula-settings">
               <div>
                 <label>系数(a)：</label>
@@ -4309,9 +4180,23 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
             </div>
           </div>
 
-          <div className="settings-subsection">
-            <h4>属性等级经验公式</h4>
-            <p title="属性等级所需经验值 = 系数(a) × 等级^n">PropExp = a * Level^n</p>
+          <div className="settings-subsection-div">
+            {/*<h4>属性等级经验公式</h4>*/}
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <h4 title="">属性等级经验公式</h4>
+              <button
+                onClick={(e) => showInfoPopup(
+                  '💡',
+                  '<div><h4>属性等级经验公式：</h4><p>PropLvExp = a * Level^n <br> 属性等级所需经验值 = 系数(a) × 等级^n</p></div>',
+                  e
+                )}
+                style={{background:'transparent',color:'black', padding:'2px' }}
+              >
+                ⓘ
+              </button>
+            </div>
+
+            <label title="属性等级所需经验值 = 系数(a) × 等级^n">PropLvExp = a * Level^n</label>
             <div className="formula-settings">
               <div>
                 <label>系数(a)：</label>
@@ -4349,9 +4234,22 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
             </div>
           </div>
 
-          <div className="settings-subsection">
-            <h4>任务奖励经验公式</h4>
-            <p title="k: 倍率；a：系数；A*B*C：类别权重 × 领域权重 × 优先级权重">Exp = k * (a*Level^2 + A*B*C*Level + 10)</p>
+          <div className="settings-subsection-div">
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <h4 title="">任务奖励经验公式</h4>
+              <button
+                onClick={(e) => showInfoPopup(
+                  '💡',
+                  '<div><h4>任务奖励经验公式：</h4><p>TaskExp = k * (a*Level^2 + A*B*C*Level + 10)  <br><br>k：倍率<br> a：系数 <br>A*B*C：类别权重 × 领域权重 × 优先级权重<br>（字段权重见【任务】字段映射设置）</p></div>',
+                  e
+                )}
+                style={{background:'transparent',color:'black', padding:'2px' }}
+              >
+                ⓘ
+              </button>
+            </div>
+
+            <label title="k: 倍率；a：系数；A*B*C：类别权重 × 领域权重 × 优先级权重">TaskExp = k * (a*Level^2 + A*B*C*Level + 10)</label>
             <div className="formula-settings">
               <div>
               </div>
@@ -4386,16 +4284,30 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
                     });
                   }}
                   className="exp-multiplier-input"
-                  style={{ width: '100px', marginLeft: '10px' }}
+                  style={{ width: '100px', marginLeft: '10px', padding:'2px' }}
                 />
               </div>
 
             </div>
           </div>
 
-          <div className="settings-subsection">
-            <h4>任务奖励属性公式</h4>
-            <p title="不可更改">Prop = (A+B+C) * Level^0.5</p>
+          <div className="settings-subsection-div">
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <h4 title="">任务奖励属性公式</h4>
+              <button
+                onClick={(e) => showInfoPopup(
+                  '💡',
+                  '<div><h4>任务奖励属性公式 (不可编辑)</h4><p>TaskProp = (A+B+C) * Level^0.5<br><br> A+B+C：类别权重 + 领域权重 + 优先级权重 <br>（字段权重见【任务】字段映射设置）</p></div>',
+                  e
+                )}
+                style={{background:'transparent',color:'black', padding:'2px' }}
+              >
+                ⓘ
+              </button>
+            </div>
+            <label>TaskProp = (A+B+C) * Level^0.5</label>
+            <p></p>
+
           </div>
         </div>}
 
@@ -4407,7 +4319,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
       <details className="settings-group">
       <summary className="settings-group-title">【面板】资源售卖</summary>
       <div className="setting-section">
-        <p>设置资源积分兑换货币积分的比率 (资源积分->钱包货币)</p>
+        <p>资源积分->货币积分兑换比率</p>
         {localSettings.creditTypes.slice(0, -2).map(resourceType => (
           <div key={resourceType} className="sell-rate-section">
             {localSettings.creditTypes.slice(-2).map(walletType => (
@@ -4502,13 +4414,35 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
     // 渲染所有设置组（原有功能）
     return (
       <>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h3 style={{ flex: 1, textAlign: 'center', margin: 0 }}>系统设置</h3>
-          <button style={{color:'black',background: 'transparent', border: 'none', fontSize: '12px', cursor: 'pointer'}} onClick={() => {
-            if (window.location && typeof window.location.reload === 'function') {
-              window.location.reload();
-            }
-          }}>⟳</button>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr auto 1fr',
+          alignItems: 'center',
+          width: '100%'
+        }}>
+          <div style={{ textAlign: 'left' }}></div> {/* 左侧占位 */}
+          <h3 style={{
+            textAlign: 'center',
+            margin: 0,
+            gridColumn: 2  // 标题在中间列
+          }}>设置</h3>
+          <div className="settings-righttop" style={{
+            justifySelf: 'end'
+          }}>
+            <button title={allGroupsCollapsed ? "展开全部" : "折叠全部"} onClick={toggleAllGroups}>
+              {allGroupsCollapsed ? "▶" : "▼"}
+            </button>
+            <button title="系统初始默认配置" onClick={setDefaultSettings}>
+              ↶
+            </button>
+            <button title="刷新" onClick={() => {
+              if (window.location && typeof window.location.reload === 'function') {
+                window.location.reload();
+              }
+            }}>
+              ⟳
+            </button>
+          </div>
         </div>
         {renderingGroups.map(group => (
           <React.Fragment key={group.id}>
@@ -4524,32 +4458,20 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
     <div className="settings-tab">
       {/*{!targetGroup && <h3>系统设置</h3>}*/}
       {renderSettingsContent()}
-
       {/*{renderGeneralSettings()}*/}
-
       {/*{renderFieldsSettings()}*/}
       {/*{renderCharacterSettings()}*/}
       {/*{renderFormulasSettings()}*/}
-
       {/*{renderRealmSettings()}*/}
-
-
       {/*{renderCreditSalesSettings()}*/}
-
       {/*{renderActionButtonSettings()}*/}
-
       {/*{renderBoardViewSettings()}*/}
       {/*/!* 添加日历视图设置组件 *!/*/}
       {/*{renderCalendarSettings()}*/}
-
       {/*{renderTaskFieldMapping()}*/}
-
       {/*/!* 添加边框设置组件 *!/*/}
       {/*{renderBorderSettings()}*/}
-
-
       {/*{renderGmCommandSettings()}*/}
-
       {/*{renderEffectSettings()}*/}
 
       {RealmModal()}
@@ -4558,7 +4480,7 @@ const SettingsTab = ({ settings, onUpdateSettings, targetGroup, onShowStatus,onS
       )}
 
       <div className="settings-button-area">
-        {!targetGroup && (<button onClick={onUpdateSettings} className="settings-recover-button" title="从系统配置重新加载并恢复">恢复</button>)}
+        {!targetGroup && (<button onClick={onUpdateSettings} className="settings-recover-button" title="重新加载用户配置">恢复</button>)}
         <button onClick={handleSaveSettings} className="settings-save-button">
           保存
         </button>

@@ -8,6 +8,9 @@ import {useLogs} from "../contexts/LogContext";
 import TagIndexManager from '../utils/TagIndexManager';
 import ProgressDialog from './ProgressDialog';
 import SettingsModal from './SettingsModal';
+import {applyFieldShortcut} from "../utils/taskUtils";
+import userDataManager from "../utils/userDataManager";
+
 
 const TaskTab = ({
   stats,
@@ -43,12 +46,12 @@ const TaskTab = ({
   // 添加代码设置props
   borderSettings,
   calendarViewSettings,
-  codeSettings = {
-    categories: {},
-    domains: {},
-    priorities: {},
-    cycleTypes: {}
-  },
+  // codeSettings = {
+  //   categories: {},
+  //   domains: {},
+  //   priorities: {},
+  //   cycleTypes: {}
+  // },
   // creditPointsFormula = "category + domain + priority",
   characterSettings,
   taskFieldMappings,
@@ -100,7 +103,8 @@ const TaskTab = ({
   const [itemSearchTerms, setItemSearchTerms] = useState({});
   const [viewMode, setViewMode] = useState(() => {
     // 优先使用本地存储保存的视图模式
-    const savedViewMode = localStorage.getItem('taskViewMode');
+    // const savedViewMode = localStorage.getItem('taskViewMode');
+    const savedViewMode = userDataManager.getUserData('taskViewMode');
     if (savedViewMode && (savedViewMode === 'list' || savedViewMode === 'board' || savedViewMode === 'calendar')) {
       return savedViewMode;
     }
@@ -118,24 +122,13 @@ const TaskTab = ({
   const [isBatchDeleteDialogOpen, setIsBatchDeleteDialogOpen] = useState(false);
   const [batchDeleteProgress, setBatchDeleteProgress] = useState(0);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [targetSettingsGroup, setTargetSettingsGroup] = useState('');
 
 
-  // const [boardGroupBy, setBoardGroupBy] = useState(() => {
-  //   // // 优先使用本地存储保存的分组设置
-  //   // const savedBoardGroupBy = localStorage.getItem('taskBoardGroupBy');
-  //   // const validGroupByOptions = ['status', 'category', 'domain', 'priority'];
-  //   //
-  //   // if (savedBoardGroupBy && validGroupByOptions.includes(savedBoardGroupBy)) {
-  //   //   return savedBoardGroupBy;
-  //   // }
-  //   // 否则使用默认值
-  //   return 'status';
-  // });
 
   const [boardGroupBy, setBoardGroupBy] = useState(() => {
     // 优先使用本地存储保存的分组设置
-    const savedBoardGroupBy = localStorage.getItem('boardGroupBy');
+    // const savedBoardGroupBy = localStorage.getItem('boardGroupBy');
+    const savedBoardGroupBy = userDataManager.getUserData('boardGroupBy');
     if (savedBoardGroupBy && ['category', 'domain', 'priority', 'status'].includes(savedBoardGroupBy)) {
       return savedBoardGroupBy;
     }
@@ -171,7 +164,7 @@ const TaskTab = ({
     }
   );
   // 添加本地状态来存储 codeSettings
-  const [localCodeSettings, setLocalCodeSettings] = useState(codeSettings);
+  // const [localCodeSettings, setLocalCodeSettings] = useState(codeSettings);
   // 支持按钮收纳
   const [mainActionButtonSettings, setMainActionButtonSettings] = useState({
     addTask: 'visible',
@@ -188,10 +181,9 @@ const TaskTab = ({
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth() + 1);
   const [showCalendarStats, setShowCalendarStats] = useState(false); // 控制统计列显示
 
-  const [calculatedExpReward, setCalculatedExpReward] = useState(0);
 
   const [isViewModeInitialized, setIsViewModeInitialized] = useState(false);
-  const taskRewardFormula = "类别权重 * 领域权重 * 优先级权重 * (1 + 0.3 * level)";
+  // const taskRewardFormula = "类别权重 * 领域权重 * 优先级权重 * (1 + 0.3 * level)";
   // // 添加快速任务输入状态
   // const [quickTaskInput, setQuickTaskInput] = useState('');
   // const [showQuickTaskInput, setShowQuickTaskInput] = useState(false);
@@ -234,7 +226,8 @@ const TaskTab = ({
   // 1. 首先修改 useState 初始化，不再依赖 calendarViewSettings prop
   const [calendarDateField, setCalendarDateField] = useState(() => {
     // 从 localStorage 获取默认值或使用 'complete_time'
-    const savedDateField = localStorage.getItem('calendarDateField');
+    // const savedDateField = localStorage.getItem('calendarDateField');
+    const savedDateField = userDataManager.getUserData('calendarDateField');
     return ['start_time', 'complete_time'].includes(savedDateField) ? savedDateField : 'complete_time';
   });
   // 在 TaskTab 组件中添加状态来跟踪编辑器全屏状态
@@ -302,7 +295,8 @@ const TaskTab = ({
 
 
   useEffect(() => {
-    localStorage.setItem('taskBoardGroupBy', boardGroupBy);
+    // localStorage.setItem('taskBoardGroupBy', boardGroupBy);
+    userDataManager.setUserData('taskBoardGroupBy', boardGroupBy);
   }, [boardGroupBy]);
 
   useEffect(() => {
@@ -310,7 +304,8 @@ const TaskTab = ({
       const viewMode = event.detail;
       if (viewMode === 'list' || viewMode === 'board' || viewMode === 'calendar') {
         setViewMode(viewMode);
-        localStorage.setItem('taskViewMode', viewMode);
+        // localStorage.setItem('taskViewMode', viewMode);
+        userDataManager.setUserData('taskViewMode', viewMode);
       }
     };
 
@@ -332,8 +327,8 @@ const TaskTab = ({
       let matchedSetting = null;
 
       // 首先尝试匹配领域
-      if (settings.characterSettings) {
-        matchedSetting = settings.characterSettings.find(
+      if (characterSettings) {
+        matchedSetting = characterSettings.find(
           item => item.domain === formData.domain
         );
       }
@@ -383,18 +378,21 @@ const TaskTab = ({
       setFilterArchived('否');
     }
     // 保存当前视图模式到本地存储
-    localStorage.setItem('taskViewMode', viewMode);
+    // localStorage.setItem('taskViewMode', viewMode);
+    userDataManager.setUserData('taskViewMode', viewMode);
   }, [viewMode]);
 
   // 看板分组方式记忆功能（需要添加）
   useEffect(() => {
     // 保存看板分组方式到本地存储
-    localStorage.setItem('boardGroupBy', boardGroupBy);
+    // localStorage.setItem('boardGroupBy', boardGroupBy);
+    userDataManager.setUserData('boardGroupBy', boardGroupBy);
   }, [boardGroupBy]);
 
   // 初始化看板分组方式（需要添加）
   useEffect(() => {
-    const savedBoardGroupBy = localStorage.getItem('boardGroupBy');
+    // const savedBoardGroupBy = localStorage.getItem('boardGroupBy');
+    const savedBoardGroupBy = userDataManager.getUserData('boardGroupBy');
     if (savedBoardGroupBy && ['category', 'domain', 'priority', 'status'].includes(savedBoardGroupBy)) {
       setBoardGroupBy(savedBoardGroupBy);
     }
@@ -424,7 +422,8 @@ const TaskTab = ({
 
   useEffect(() => {
     if (isViewModeInitialized) {
-      localStorage.setItem('taskViewMode', viewMode);
+      // localStorage.setItem('taskViewMode', viewMode);
+      userDataManager.setUserData('taskViewMode', viewMode);
     }
   }, [viewMode, isViewModeInitialized]);
 
@@ -506,7 +505,8 @@ const TaskTab = ({
   const [currentPage, setCurrentPage] = useState(1); // 当前页码
   const [tasksPerPage, setTasksPerPage] = useState(() => {
     // 从 localStorage 中获取保存的每页任务数，如果没有则默认为 10
-    const savedTasksPerPage = localStorage.getItem('tasksPerPage');
+    // const savedTasksPerPage = localStorage.getItem('tasksPerPage');
+    const savedTasksPerPage = userDataManager.getUserData('tasksPerPage');
     return savedTasksPerPage ? parseInt(savedTasksPerPage, 10) : 10;
   }); // 每页任务数
   const [inputPage, setInputPage] = useState(currentPage); // 用于页码输入框的状态
@@ -925,7 +925,8 @@ const TaskTab = ({
     }
 
     setBoardGroupBy(targetGroupBy);
-    localStorage.setItem('taskBoardGroupBy', targetGroupBy);
+    // localStorage.setItem('taskBoardGroupBy', targetGroupBy);
+    userDataManager.setUserData('taskBoardGroupBy', targetGroupBy);
   }
 
   // 添加一个 ref 用于任务名称输入框
@@ -1148,22 +1149,16 @@ const TaskTab = ({
   // 添加横向滚动相关状态
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const calendarScrollRef = useRef(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
+
 
   // 添加 useEffect 来加载保存的字段设置
   React.useEffect(() => {
     try {
-      const savedSettings = localStorage.getItem('taskFieldSettings');
+      // const savedSettings = localStorage.getItem('taskFieldSettings');
+      const savedSettings = userDataManager.getUserData('taskFieldSettings');
       if (savedSettings) {
         const parsedSettings = JSON.parse(savedSettings);
-        // 确保所有字段都存在，防止因字段更新导致的问题
-        const mergedSettings = {
-          ...fieldSettings,
-          ...parsedSettings
-        };
-        setFieldSettings(mergedSettings);
+        setFieldSettings(parsedSettings);
       }
     } catch (e) {
       console.warn('无法从本地存储加载字段设置:', e);
@@ -1171,32 +1166,32 @@ const TaskTab = ({
   }, []);
 
   // 在 TaskTab 组件中添加 useEffect 来加载保存的字段代码设置
-  React.useEffect(() => {
-    try {
-      const savedCodeSettings = localStorage.getItem('taskCodeSettings');
-      if (savedCodeSettings) {
-        const parsedCodeSettings = JSON.parse(savedCodeSettings);
-        // 确保所有字段都存在，防止因字段更新导致的问题
-        const mergedCodeSettings = {
-          categories: {},
-          domains: {},
-          priorities: {},
-          cycleTypes: {},
-          ...parsedCodeSettings
-        };
-        // 如果通过 prop 传入了 codeSettings，则优先使用 prop 的值
-        if (Object.keys(codeSettings).length > 0 &&
-            Object.values(codeSettings).some(mapping => Object.keys(mapping).length > 0)) {
-          // prop 中有有效数据，使用 prop 的值
-        } else {
-          // 否则使用本地存储的值
-          setLocalCodeSettings(mergedCodeSettings);
-        }
-      }
-    } catch (e) {
-      console.warn('无法从本地存储加载字段代码设置:', e);
-    }
-  }, []);
+  // React.useEffect(() => {
+  //   try {
+  //     const savedCodeSettings = localStorage.getItem('taskCodeSettings');
+  //     if (savedCodeSettings) {
+  //       const parsedCodeSettings = JSON.parse(savedCodeSettings);
+  //       // 确保所有字段都存在，防止因字段更新导致的问题
+  //       const mergedCodeSettings = {
+  //         categories: {},
+  //         domains: {},
+  //         priorities: {},
+  //         cycleTypes: {},
+  //         ...parsedCodeSettings
+  //       };
+  //       // 如果通过 prop 传入了 codeSettings，则优先使用 prop 的值
+  //       if (Object.keys(codeSettings).length > 0 &&
+  //           Object.values(codeSettings).some(mapping => Object.keys(mapping).length > 0)) {
+  //         // prop 中有有效数据，使用 prop 的值
+  //       } else {
+  //         // 否则使用本地存储的值
+  //         setLocalCodeSettings(mergedCodeSettings);
+  //       }
+  //     }
+  //   } catch (e) {
+  //     console.warn('无法从本地存储加载字段代码设置:', e);
+  //   }
+  // }, []);
 
 
   const calcEmbeddedViewMode = (mode1, mode2) => {
@@ -1537,8 +1532,103 @@ const TaskTab = ({
     }
   };
 
-
   const handleCompleteTask = async (taskId) => {
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+      // 状态为已完成则退出
+      if (task.status === '已完成') return;
+
+      let newCompletedCount = (task.completed_count || 0) + 1;
+      let newTotalCompletionCount = (task.total_completion_count || 0) + 1;
+      let newStatus = task.status;
+      let max_completes = task.max_completions || 99999; // 若为0则使用默认最大完成次数99999
+
+      // 计算完成状态
+      if (max_completes > 0 && newCompletedCount >= max_completes) {
+        newStatus = '已完成';
+      } else if (newCompletedCount > 0 && newCompletedCount < max_completes) {
+        newStatus = '重复中';
+      }
+
+
+      // 完成次数溢出的任务：只更新状态为已完成，不发奖励
+      if (newCompletedCount > max_completes) {
+        const updatedTask0 = {
+          ...task,
+          status: newStatus,
+        };
+
+
+        // 发送更新请求
+        const response0 = await fetch(`${CONFIG.API_BASE_URL}/api/tasks/${taskId}/update_status_completed`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedTask0)
+        });
+
+
+        const result0 = await response0.json();
+
+        if (response0.ok) {
+          onShowStatus(result0.message || '任务已完成');
+          onCompleteTask();
+        }
+
+        return;
+      }
+
+
+
+
+      let completeTime = new Date().toLocaleString('sv-SE');
+
+      // 为后台更新准备任务数据
+      const updatedTask = {
+        ...task,
+        completed_count: newCompletedCount,
+        total_completion_count: newTotalCompletionCount,
+        status: newStatus,
+        complete_time: completeTime,
+        items_reward: task.items_reward,
+      };
+      console.log('发送到后台的更新任务数据:', updatedTask);
+
+      // 发送更新请求至后台
+      const response = await fetch(`${CONFIG.API_BASE_URL}/api/tasks/${taskId}/complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedTask)
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        onShowStatus(result.message || '任务已完成');
+
+        // 显示奖励信息
+        if (result.reward) {
+          alert(`任务已完成!\n\n获得以下奖励:\n${result.reward}`);
+        }
+        addLog('任务', '完成任务', `完成${task.name}: ${result.reward || '无奖励'}`);
+
+        // 更新任务列表
+        onCompleteTask();
+      } else {
+        alert(result.error || '完成任务失败');
+        addLog('任务', '完成失败', `任务${task.name} 完成失败: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('完成任务时发生错误:', error);
+      alert('网络错误');
+    }
+  };
+
+  const handleCompleteTask_old = async (taskId) => {
     try {
       const task = tasks.find(t => t.id === taskId);
       if (!task) return;
@@ -1565,7 +1655,7 @@ const TaskTab = ({
 
 
         // 发送更新请求
-        const response0 = await fetch(`${CONFIG.API_BASE_URL}/api/tasks/${taskId}/complete`, {
+        const response0 = await fetch(`${CONFIG.API_BASE_URL}/api/tasks/${taskId}/update_completed`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1611,7 +1701,6 @@ const TaskTab = ({
 
       if (response.ok) {
         onShowStatus(result.message || '任务已完成');
-        onCompleteTask();
 
         // 显示奖励信息
         // const rewardText = formatReward(task);
@@ -1619,8 +1708,9 @@ const TaskTab = ({
         addLog('任务', '完成任务', `完成${task.name}: ${result.reward}`)
 
         // 新增：更新角色的经验值、积分和属性点
-        await updateCharacterStats(task);
+        await updateCharacterStats_old(task);
        // 更新道具奖励: 后台处理
+        onCompleteTask();
       } else {
         alert(result.error || '完成任务失败');
         addLog('任务', '完成失败', `任务${task.name} 完成失败: ${result.error}`)
@@ -1630,14 +1720,12 @@ const TaskTab = ({
       alert('网络错误');
     }
   };
-
-
   // 修改 updateCharacterStats 函数，添加更详细的错误处理
-  const updateCharacterStats = async (task) => {
+  const updateCharacterStats_old = async (task) => {
     try {
       // 1. 更新经验奖励
       if (task.exp_reward && task.exp_reward > 0) {
-        console.log('更新角色经验值中:', task.exp_reward);
+        // console.log('更新角色经验值中:', task.exp_reward);
         try {
           const response = await fetch(`${CONFIG.API_BASE_URL}/api/character/exp`, {
             method: 'POST',
@@ -1652,17 +1740,17 @@ const TaskTab = ({
           }
 
           const result = await response.json();
-          console.log('经验值更新结果:', result);
+          // console.log('经验值更新结果:', result);
         } catch (expError) {
           console.error('更新经验值失败:', expError);
         }
       }
-      console.log('更新角色经验值成功');
+      // console.log('更新角色经验值成功');
 
       // 2. 更新积分奖励
       if (task.credits_reward) {
         for (const [creditType, amount] of Object.entries(task.credits_reward)) {
-          console.log(`更新角色${creditType}积分中:`, amount);
+          // console.log(`更新角色${creditType}积分中:`, amount);
           if (amount > 0) {
             try {
               const creditResponse = await fetch(`${CONFIG.API_BASE_URL}/api/credits/add/${creditType}/${amount}`, {
@@ -1678,16 +1766,16 @@ const TaskTab = ({
               }
 
               const creditResult = await creditResponse.json();
-              console.log(`积分${creditType}更新结果:`, creditResult);
+              // console.log(`积分${creditType}更新结果:`, creditResult);
             } catch (creditError) {
               console.error(`更新积分${creditType}失败:`, creditError);
               continue; // 继续处理其他积分类型
             }
 
             // 3. 根据积分类型到属性类别的映射关系更新属性点
-            if (settings && settings.characterSettings) {
+            if (characterSettings) {
               // 查找匹配的设置项
-              const matchedSetting = settings.characterSettings.find(
+              const matchedSetting = characterSettings.find(
                 item => item.creditType === creditType
               );
 
@@ -1707,7 +1795,7 @@ const TaskTab = ({
                   }
 
                   const propertyResult = await propertyResponse.json();
-                  console.log(`属性${matchedSetting.propertyCategory}更新结果:`, propertyResult);
+                  // console.log(`属性${matchedSetting.propertyCategory}更新结果:`, propertyResult);
                 } catch (propertyError) {
                   console.error(`更新属性${matchedSetting.propertyCategory}失败:`, propertyError);
                 }
@@ -2165,7 +2253,7 @@ const TaskTab = ({
                   const otherSelected = selectedTasks.filter(id => !currentPageTaskIds.includes(id));
                   setSelectedTasks([...otherSelected, ...invertedPageSelection]);
                 }}>
-                  当前页反选
+                  反选当前页
                 </button>
               )}
               {status.totalSelected > 0 && (
@@ -2174,9 +2262,26 @@ const TaskTab = ({
                     .map(task => task.id)
                     .filter(id => !selectedTasks.includes(id)));
                 }}>
-                  全部页反选
+                  反选全部页
                 </button>
               )}
+
+              {status.totalSelected > 0 && (
+                <button
+                  onClick={handleBatchDelete}
+                  title="批量删除"
+                >
+                  ❌批量删除 ({status.totalSelected})
+                </button>
+              )}
+              {/*{status.totalSelected > 0 && (*/}
+              {/*  <button onClick={handleBatchArchive}>批量归档</button>*/}
+              {/*)}*/}
+
+              {/*{status.totalSelected > 0 && (*/}
+              {/*  <button onClick={refreshCycleTasks}>刷新循环</button>*/}
+              {/*)}*/}
+
             </div>
           </div>
         )}
@@ -2250,7 +2355,8 @@ const TaskTab = ({
     }
 
     // 保持当前分组设置，避免页面刷新后回到默认状态
-    localStorage.setItem('taskBoardGroupBy', boardGroupBy);
+    // localStorage.setItem('taskBoardGroupBy', boardGroupBy);
+    userDataManager.setUserData('taskBoardGroupBy', boardGroupBy);
     setDraggedTask(null);
   };
 
@@ -2381,7 +2487,7 @@ const TaskTab = ({
       { key: 'items_reward', label: '奖励' },
       { key: 'exp_reward', label: '经验' },
       { key: 'status', label: '状态' },
-      { key: 'notes', label: '备注'},
+      // { key: 'notes', label: '备注'},
       { key: 'tags', label: '标签'},
     ];
     const mobileFields = [
@@ -2832,7 +2938,7 @@ const TaskTab = ({
                     <div className="task-tags-container" style={{textAlign: 'left'}}>
                       <span style={{fontSize: '11px'}}>⚔{task.exp_reward || 0}</span>
                       {task.credits_reward && Object.entries(task.credits_reward).map(([type, amount]) => {
-                        const creditSetting = settings?.characterSettings?.find(item => item.creditType === type);
+                        const creditSetting = characterSettings?.find(item => item.creditType === type);
                         const icon = creditSetting?.creditIcon || type;
 
                         return (
@@ -3207,7 +3313,8 @@ const TaskTab = ({
   // 添加字段设置的保存机制
   const saveFieldSettings = (settings) => {
     try {
-      localStorage.setItem('taskFieldSettings', JSON.stringify(settings));
+      // localStorage.setItem('taskFieldSettings', JSON.stringify(settings));
+      userDataManager.setUserData('taskFieldSettings', settings);
     } catch (e) {
       console.warn('无法保存字段设置到本地存储:', e);
     }
@@ -3621,7 +3728,8 @@ const TaskTab = ({
   // 保存按钮配置的函数
   const saveActionButtonSettings = (settings) => {
     try {
-      localStorage.setItem('taskActionButtonSettings', JSON.stringify(settings));
+      // localStorage.setItem('taskActionButtonSettings', JSON.stringify(settings));
+      userDataManager.setUserData('taskActionButtonSettings', settings);
     } catch (e) {
       console.warn('无法保存按钮设置到本地存储:', e);
     }
@@ -3640,7 +3748,8 @@ const TaskTab = ({
 
   useEffect(() => {
     try {
-      const savedSettings = localStorage.getItem('taskActionButtonSettings');
+      // const savedSettings = localStorage.getItem('taskActionButtonSettings');
+      const savedSettings = userDataManager.getUserData('taskActionButtonSettings');
       if (savedSettings) {
         const parsedSettings = JSON.parse(savedSettings);
         setActionButtonSettings(parsedSettings);
@@ -3811,83 +3920,83 @@ const TaskTab = ({
 
 
 
-  // 修改 applyFieldShortcut 函数以正确处理字段代码映射，增强映射检查和处理，使用传入的 codeSettings props
-  const applyFieldShortcut = (formData, code) => {
-    // 使用传入的 codeSettings props
-    const currentCodeSettings = codeSettings;
-
-    // 确保 codeSettings 存在且有正确的结构
-    if (!currentCodeSettings) {
-      console.log('codeSettings 不存在');
-      return;
-    }
-
-
-    // 特殊处理最大重复次数，格式如 "n5" 表示最大重复次数为5
-    const num = parseInt(code);
-    if (!isNaN(num) && num > 0) {
-      formData.max_completions = num;
-      console.log(`设置最大重复次数为 ${num}`);
-      return;
-    }
-
-    // 检查所有字段映射是否为空
-    const isEmptyMapping = Object.values(currentCodeSettings).every(mapping =>
-      !mapping || Object.keys(mapping).length === 0
-    );
-
-    if (isEmptyMapping) {
-      console.log('警告：所有字段代码映射均为空，请检查设置是否正确加载');
-      return;
-    }
-
-    // 遍历所有字段类型
-    for (const [field, mappings] of Object.entries(currentCodeSettings)) {
-      // 确保 mappings 存在且不为空
-      if (!mappings || Object.keys(mappings).length === 0) {
-        console.log(`字段类型 ${field} 的映射为空`);
-        continue;
-      }
-
-      try {
-        // 遍历该字段类型的所有值和代码映射
-        for (const [value, shortcutCode] of Object.entries(mappings)) {
-          // 如果代码匹配
-          // console.log(`检查字段值: ${value}, 代码: ${shortcutCode}`);
-          if (shortcutCode === code) {
-            // console.log(`找到匹配代码: ${code} 对应字段值: ${value}`);
-            // 根据字段类型设置对应的表单值
-            switch (field) {
-              case 'categories':
-                console.log(`设置任务类别为 ${value}`);
-                formData.category = value;
-                break;
-              case 'domains':
-                console.log(`设置任务领域为 ${value}`);
-                formData.domain = value;
-                break;
-              case 'priorities':
-                console.log(`设置任务优先级为 ${value}`);
-                formData.priority = value;
-                break;
-              case 'cycleTypes':
-                console.log(`设置循环周期为 ${value}`);
-                formData.task_type = value;
-                break;
-              default:
-                console.log(`未知字段类型: ${field}`);
-                break;
-            }
-            return; // 找到匹配项后立即返回
-          }
-        }
-      } catch (error) {
-        console.error(`处理字段类型 ${field} 时出错:`, error);
-      }
-    }
-
-    console.log(`未找到代码 ${code} 的匹配项`);
-  };
+  // // 修改 applyFieldShortcut 函数以正确处理字段代码映射，增强映射检查和处理，使用传入的 codeSettings props
+  // const applyFieldShortcut_deprecated = (formData, code) => {
+  //   // 使用传入的 codeSettings props
+  //   const currentCodeSettings = codeSettings;
+  //
+  //   // 确保 codeSettings 存在且有正确的结构
+  //   if (!currentCodeSettings) {
+  //     console.log('codeSettings 不存在');
+  //     return;
+  //   }
+  //
+  //
+  //   // 特殊处理最大重复次数，格式如 "n5" 表示最大重复次数为5
+  //   const num = parseInt(code);
+  //   if (!isNaN(num) && num > 0) {
+  //     formData.max_completions = num;
+  //     console.log(`设置最大重复次数为 ${num}`);
+  //     return;
+  //   }
+  //
+  //   // 检查所有字段映射是否为空
+  //   const isEmptyMapping = Object.values(currentCodeSettings).every(mapping =>
+  //     !mapping || Object.keys(mapping).length === 0
+  //   );
+  //
+  //   if (isEmptyMapping) {
+  //     console.log('警告：所有字段代码映射均为空，请检查设置是否正确加载');
+  //     return;
+  //   }
+  //
+  //   // 遍历所有字段类型
+  //   for (const [field, mappings] of Object.entries(currentCodeSettings)) {
+  //     // 确保 mappings 存在且不为空
+  //     if (!mappings || Object.keys(mappings).length === 0) {
+  //       console.log(`字段类型 ${field} 的映射为空`);
+  //       continue;
+  //     }
+  //
+  //     try {
+  //       // 遍历该字段类型的所有值和代码映射
+  //       for (const [value, shortcutCode] of Object.entries(mappings)) {
+  //         // 如果代码匹配
+  //         // console.log(`检查字段值: ${value}, 代码: ${shortcutCode}`);
+  //         if (shortcutCode === code) {
+  //           // console.log(`找到匹配代码: ${code} 对应字段值: ${value}`);
+  //           // 根据字段类型设置对应的表单值
+  //           switch (field) {
+  //             case 'categories':
+  //               console.log(`设置任务类别为 ${value}`);
+  //               formData.category = value;
+  //               break;
+  //             case 'domains':
+  //               console.log(`设置任务领域为 ${value}`);
+  //               formData.domain = value;
+  //               break;
+  //             case 'priorities':
+  //               console.log(`设置任务优先级为 ${value}`);
+  //               formData.priority = value;
+  //               break;
+  //             case 'cycleTypes':
+  //               console.log(`设置循环周期为 ${value}`);
+  //               formData.task_type = value;
+  //               break;
+  //             default:
+  //               console.log(`未知字段类型: ${field}`);
+  //               break;
+  //           }
+  //           return; // 找到匹配项后立即返回
+  //         }
+  //       }
+  //     } catch (error) {
+  //       console.error(`处理字段类型 ${field} 时出错:`, error);
+  //     }
+  //   }
+  //
+  //   console.log(`未找到代码 ${code} 的匹配项`);
+  // };
 
 
   // 添加一个通用的CSV字段转义函数
@@ -3965,17 +4074,18 @@ const TaskTab = ({
   const showImportInstructions = () => {
     // 显示导入说明弹窗
     const message = `
-      CSV文件格式说明:
-      必须包含字段: id,name
-      可选字段: description,task_type,max_completions,category,domain,priority,credits_reward,items_reward,start_time,complete_time,archived,status,completed_count,total_completion_count, tags, notes
-      注意: 
-      1. task_type 可选值: single,daily,weekly,monthly,yearly
-      2. credits_reward 和 items_reward 应为JSON格式字符串
-      3. 日期格式: YYYY-MM-DD HH:MM:SS
+    导入格式说明:
+      
+    请使用导出功能获取任务数据csv文件，以查看表头字段及内容格式。
     `;
-    alert(message);
+    // alert(message);
+
+    const userChoice = window.confirm(message);
+
     // 显示文件选择界面
-    document.getElementById('csv-file').click();
+    if (userChoice) {
+      document.getElementById('csv-file').click();
+    }
   };
 
   const handleImportTasksCSV_deprecated = async (event) => {
@@ -6005,7 +6115,7 @@ const TaskTab = ({
         <div className="task-hover-rewards">
           <span className="reward-item">⚔{task.exp_reward || 0}</span>
           {task.credits_reward && Object.entries(task.credits_reward).map(([type, amount]) => {
-            const creditSetting = settings?.characterSettings?.find(item => item.creditType === type);
+            const creditSetting = characterSettings?.find(item => item.creditType === type);
             const icon = creditSetting?.creditIcon || type;
 
             return (
@@ -6409,7 +6519,7 @@ const TaskTab = ({
           <div className="task-hover-rewards">
             <span className="reward-item" title="经验值">⚔{task.exp_reward || 0}</span>
             {task.credits_reward && Object.entries(task.credits_reward).map(([type, amount]) => {
-              const creditSetting = settings?.characterSettings?.find(item => item.creditType === type);
+              const creditSetting = characterSettings?.find(item => item.creditType === type);
               const icon = creditSetting?.creditIcon || type;
 
               return (
@@ -7934,7 +8044,8 @@ const TaskTab = ({
             const newValue = e.target.value;
             setCalendarDateField(newValue);
             // 直接保存到 localStorage
-            localStorage.setItem('calendarDateField', newValue);
+            // localStorage.setItem('calendarDateField', newValue);
+            userDataManager.setUserData('calendarDateField', newValue);
           }}
         >
           <option value="start_time" style={{ fontSize: '12px' }}>开始时间</option>
@@ -8349,7 +8460,7 @@ const TaskTab = ({
               setSelectedDate(null);
             }}
             currentField="calendar-log"
-            codeSettings={codeSettings}
+            // codeSettings={codeSettings}
             stats={stats}
             characterSettings={characterSettings}
             taskFieldMappings={taskFieldMappings}
@@ -8547,7 +8658,8 @@ const TaskTab = ({
   const toggleViewMode = (mode) => {
     setViewMode(mode);
     // 保存到本地存储
-    localStorage.setItem('taskViewMode', mode);
+    // localStorage.setItem('taskViewMode', mode);
+    userDataManager.setUserData('taskViewMode', mode);
   };
 
 
@@ -8795,6 +8907,48 @@ const TaskTab = ({
     }
   };
 
+  // 在组件中添加图标渲染函数
+  const renderItemIcon = (icon, name, size = 20) => {
+    if (!icon) return null;
+
+    if (icon.startsWith('http') || icon.startsWith('data:image')) {
+      // 处理图片URL
+      return (
+        <img
+          src={icon}
+          alt={name}
+          style={{
+            width: `${size}px`,
+            height: `${size}px`,
+            objectFit: 'contain'
+          }}
+        />
+      );
+    } else {
+      // 处理Iconify图标名称，显示首字母作为占位符
+      return (
+        <span
+          className="icon-placeholder"
+          title={icon}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: `${size}px`,
+            height: `${size}px`,
+            backgroundColor: '#f0f0f0',
+            borderRadius: '4px',
+            fontWeight: 'bold',
+            color: '#666',
+            fontSize: `${size * 0.4}px`
+          }}
+        >
+          {name.charAt(0).toUpperCase()}
+        </span>
+      );
+    }
+  };
+
   // 渲染奖励部分
   const renderRewardsSection = () => {
     return (
@@ -8832,15 +8986,27 @@ const TaskTab = ({
               {showDropdown && (
                 <div className="autocomplete-dropdown">
                   {filteredItems.length > 0 ? (
-                    filteredItems.map(itemName => (
-                      <div
-                        key={itemName}
-                        className="autocomplete-item"
-                        onMouseDown={() => selectItem(itemName)}
-                      >
-                        {itemName}
-                      </div>
-                    ))
+                    filteredItems.map(itemName => {
+                      // 获取道具信息（包括图标）
+                      const itemInfo = items[itemName];
+                      const icon = itemInfo?.icon;
+
+                      return (
+                        <div
+                          key={itemName}
+                          className="autocomplete-item"
+                          onMouseDown={() => selectItem(itemName)}
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                        >
+                          {icon && (
+                            <div style={{ width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {renderItemIcon(icon, itemName, 20)}
+                            </div>
+                          )}
+                          <span>{itemName}</span>
+                        </div>
+                      );
+                    })
                   ) : (
                     <div className="autocomplete-item no-results">
                       未找到匹配的道具
@@ -9113,7 +9279,7 @@ const TaskTab = ({
                   mdEditorClassNameSuffix="task-notes-editor"
                   embedded={true}
                   currentField="note-editor"
-                  codeSettings={codeSettings}
+                  // codeSettings={codeSettings}
                   stats={stats}
                   characterSettings={characterSettings}
                   taskFieldMappings={taskFieldMappings}
@@ -9303,7 +9469,7 @@ const TaskTab = ({
                   mdEditorClassNameSuffix="task-notes-editor"
                   embedded={true}
                   currentField="note-editor"
-                  codeSettings={codeSettings}
+                  // codeSettings={codeSettings}
                   stats={stats}
                   characterSettings={characterSettings}
                   taskFieldMappings={taskFieldMappings}
@@ -9643,7 +9809,8 @@ const TaskTab = ({
               onChange={(e) => {
                 const newGroupBy = e.target.value;
                 setBoardGroupBy(newGroupBy);
-                localStorage.setItem('taskBoardGroupBy', newGroupBy);
+                // localStorage.setItem('taskBoardGroupBy', newGroupBy);
+                userDataManager.setUserData('taskBoardGroupBy', newGroupBy);
               }}
             >
               {fieldSettings.category && <option value="category">类别组</option>}
@@ -9997,7 +10164,15 @@ const TaskTab = ({
                           {currentFieldSettings.id && (
                             <td>{task.id}</td>
                           )}
-                          <td>{task.name}</td>
+                          <td
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              customShowTaskDetails(task);
+                            }}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            {task.name}
+                          </td>
                           {currentFieldSettings.description && (
                             <td>{task.description}</td>
                           )}
@@ -10288,7 +10463,8 @@ const TaskTab = ({
               onChange={(e) => {
                 const newTasksPerPage = Number(e.target.value);
                 setTasksPerPage(newTasksPerPage);
-                localStorage.setItem('tasksPerPage', newTasksPerPage.toString());
+                // localStorage.setItem('tasksPerPage', newTasksPerPage.toString());
+                userDataManager.setUserData('tasksPerPage', newTasksPerPage.toString());
                 setCurrentPage(1); // 重置到第一页
                 setInputPage(1); // 同步更新输入框的值
               }}

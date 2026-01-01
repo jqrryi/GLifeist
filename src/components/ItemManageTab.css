@@ -381,3 +381,48 @@
 .recipe-item-dropdown dropdown-item:hover {
   background-color: #f0f0f0;
 }
+
+
+.loot-box-modal {
+  /*max-width: 400px;*/
+
+}
+
+.dropdown-menu button {
+  display: block;
+  width: 100%;
+  padding: 5px 10px;
+  textAlign: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.dropdown-menu button:hover {
+  width: 92% !important;
+  background-color: #f0f0f0 !important;
+}
+
+.items-operations {
+  display: flex;
+  flex-direction: row;
+}
+
+.items-operations button {
+  color: black;
+  background-color: transparent;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  padding: 10px 10px;
+  border-color: transparent;
+}
+
+.items-operations button:hover {
+  background-color: #f0f0f0;
+}
+
+.loot-box-component {
+  text-align: center;
+  align-items: center;
+  font-size: 10px;
+}

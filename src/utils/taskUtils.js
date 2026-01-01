@@ -4,7 +4,7 @@ import CONFIG from '../config';
 export const createTaskDirectly = async (input, {
   onShowStatus,
   addLog,
-  codeSettings,
+  // codeSettings,
   characterSettings,
   taskFieldMappings,
   stats,
@@ -81,7 +81,7 @@ export const createTaskDirectly = async (input, {
 
       // 应用代码映射
       codes.forEach(code => {
-        applyFieldCode(taskData, code, codeSettings);
+        applyFieldCode(taskData, code, taskFieldMappings);
       });
     }
 
@@ -123,7 +123,7 @@ export const createTaskDirectly = async (input, {
 };
 
 // 应用字段代码的辅助函数（与TaskSystem.js中保持一致）
-const applyFieldCode = (formData, code, codeSettings) => {
+const applyFieldCode_deperecated = (formData, code, codeSettings) => {
   // 使用传入的 codeSettings props
   const currentCodeSettings = codeSettings;
 
@@ -164,6 +164,76 @@ const applyFieldCode = (formData, code, codeSettings) => {
       for (const [value, shortcutCode] of Object.entries(mappings)) {
         // 如果代码匹配
         if (shortcutCode === code) {
+          // 根据字段类型设置相应的表单字段
+          switch (field) {
+            case 'categories':
+              formData.category = value;
+              console.log(`设置类别为 ${value}`);
+              break;
+            case 'domains':
+              formData.domain = value;
+              console.log(`设置领域为 ${value}`);
+              break;
+            case 'priorities':
+              formData.priority = value;
+              console.log(`设置优先级为 ${value}`);
+              break;
+            case 'cycleTypes':
+              formData.task_type = value;
+              console.log(`设置循环周期为 ${value}`);
+              break;
+            default:
+              console.log(`未知字段类型: ${field}`);
+          }
+          return; // 找到匹配项后退出
+        }
+      }
+    } catch (error) {
+      console.error(`处理字段 ${field} 时出错:`, error);
+    }
+  }
+
+  console.log(`未找到代码 "${code}" 的映射`);
+};
+
+const applyFieldCode = (formData, code, taskFieldMappings) => {
+  // 确保 taskFieldMappings 存在且有正确的结构
+  if (!taskFieldMappings) {
+    console.log('taskFieldMappings 不存在');
+    return;
+  }
+
+  // 特殊处理最大重复次数，现在只要是一个整数就处理为max_completions
+  const num = parseInt(code);
+  if (!isNaN(num) && num > 0) {
+    formData.max_completions = num;
+    console.log(`设置最大重复次数为 ${num}`);
+    return;
+  }
+
+  // 检查所有字段映射是否为空
+  const isEmptyMapping = Object.values(taskFieldMappings).every(mapping =>
+    !mapping || Object.keys(mapping).length === 0
+  );
+
+  if (isEmptyMapping) {
+    console.log('警告：所有字段代码映射均为空，请检查设置是否正确加载');
+    return;
+  }
+
+  // 遍历所有字段类型
+  for (const [field, mappings] of Object.entries(taskFieldMappings)) {
+    // 确保 mappings 存在且不为空
+    if (!mappings || Object.keys(mappings).length === 0) {
+      console.log(`字段类型 ${field} 的映射为空`);
+      continue;
+    }
+
+    try {
+      // 遍历该字段类型的所有值和代码映射
+      for (const [value, config] of Object.entries(mappings)) {
+        // 如果代码匹配 (注意这里访问的是 config.code)
+        if (config.code === code) {
           // 根据字段类型设置相应的表单字段
           switch (field) {
             case 'categories':
@@ -306,4 +376,75 @@ const calculateTaskRewards = (taskData, { characterSettings, taskFieldMappings, 
   }
 
   return rewards;
+};
+
+
+export const applyFieldShortcut = (formData, code, taskFieldMappings) => {
+  // 确保 taskFieldMappings 存在且有正确的结构
+  if (!taskFieldMappings) {
+    console.log('taskFieldMappings 不存在');
+    return;
+  }
+
+  // 特殊处理最大重复次数，格式如 "n5" 表示最大重复次数为5
+  const num = parseInt(code);
+  if (!isNaN(num) && num > 0) {
+    formData.max_completions = num;
+    console.log(`设置最大重复次数为 ${num}`);
+    return;
+  }
+
+  // 检查所有字段映射是否为空
+  const isEmptyMapping = Object.values(taskFieldMappings).every(mapping =>
+    !mapping || Object.keys(mapping).length === 0
+  );
+
+  if (isEmptyMapping) {
+    console.log('警告：所有字段代码映射均为空，请检查设置是否正确加载');
+    return;
+  }
+
+  // 遍历所有字段类型
+  for (const [field, mappings] of Object.entries(taskFieldMappings)) {
+    // 确保 mappings 存在且不为空
+    if (!mappings || Object.keys(mappings).length === 0) {
+      console.log(`字段类型 ${field} 的映射为空`);
+      continue;
+    }
+
+    try {
+      // 遍历该字段类型的所有值和代码映射
+      for (const [value, config] of Object.entries(mappings)) {
+        // 如果代码匹配 (注意这里访问的是 config.code)
+        if (config.code === code) {
+          // 根据字段类型设置相应的表单字段
+          switch (field) {
+            case 'categories':
+              formData.category = value;
+              console.log(`设置类别为 ${value}`);
+              break;
+            case 'domains':
+              formData.domain = value;
+              console.log(`设置领域为 ${value}`);
+              break;
+            case 'priorities':
+              formData.priority = value;
+              console.log(`设置优先级为 ${value}`);
+              break;
+            case 'cycleTypes':
+              formData.task_type = value;
+              console.log(`设置循环周期为 ${value}`);
+              break;
+            default:
+              console.log(`未知字段类型: ${field}`);
+          }
+          return; // 找到匹配项后退出
+        }
+      }
+    } catch (error) {
+      console.error(`处理字段 ${field} 时出错:`, error);
+    }
+  }
+
+  console.log(`未找到代码 "${code}" 的映射`);
 };

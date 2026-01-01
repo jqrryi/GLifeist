@@ -1,5 +1,7 @@
 // src/services/logService.js
 import CONFIG from '../config';
+import AuthManager from '../utils/auth';
+import userDataManager from "../utils/userDataManager";
 
 class LogService {
   constructor() {
@@ -10,21 +12,23 @@ class LogService {
   // 加载日志
   async loadLogs() {
     try {
-      const response = await fetch(`${CONFIG.API_BASE_URL}/api/logs`);
+      const response = await AuthManager.authenticatedFetch(`${CONFIG.API_BASE_URL}/api/logs`);
       if (response.ok) {
         const data = await response.json();
         this.logs = data.logs || [];
       } else {
         // 如果API失败，尝试从localStorage加载
-        const localLogs = localStorage.getItem('appLogs');
-        if (localLogs) {
-          this.logs = JSON.parse(localLogs) || [];
-        }
+        // const localLogs = localStorage.getItem('appLogs');
+        // if (localLogs) {
+        //   this.logs = JSON.parse(localLogs) || [];
+        // }
+        this.logs=[];
       }
     } catch (error) {
       console.error('加载日志失败:', error);
       // 如果API失败，尝试从localStorage加载
-      const localLogs = localStorage.getItem('appLogs');
+      // const localLogs = localStorage.getItem('appLogs');
+      const localLogs = userDataManager.getUserData('appLogs');
       if (localLogs) {
         this.logs = JSON.parse(localLogs) || [];
       }
@@ -35,10 +39,11 @@ class LogService {
   async saveLogs() {
     try {
       // 同时保存到localStorage作为备份
-      localStorage.setItem('appLogs', JSON.stringify(this.logs));
+      // localStorage.setItem('appLogs', JSON.stringify(this.logs));
+      userDataManager.setUserData('appLogs', this.logs);
 
       // 保存到服务器
-      const response = await fetch(`${CONFIG.API_BASE_URL}/api/logs/save`, {
+      const response = await AuthManager.authenticatedFetch(`${CONFIG.API_BASE_URL}/api/logs/save`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,10 +76,12 @@ class LogService {
   // 清空日志
   async clearLogs() {
     this.logs = [];
-    localStorage.removeItem('appLogs');
+    // localStorage.removeItem('appLogs');
+    userDataManager.clearUserData('appLogs');
+
 
     try {
-      const response = await fetch(`${CONFIG.API_BASE_URL}/api/logs/clear`, {
+      const response = await AuthManager.authenticatedFetch(`${CONFIG.API_BASE_URL}/api/logs/clear`, {
         method: 'POST'
       });
       return response.ok;

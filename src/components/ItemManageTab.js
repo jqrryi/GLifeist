@@ -4,7 +4,7 @@ import CONFIG from '../config';
 import './ItemManageTab.css';
 import SettingsModal from "./SettingsModal";
 import ProgressDialog from './ProgressDialog';
-
+import userDataManager from '../utils/userDataManager';
 
 const ItemManageTab = ({
   items,
@@ -17,11 +17,11 @@ const ItemManageTab = ({
   creditTypes = ["智", "武", "体", "活", "敏", "灵", "A", "B"],
   // autoConvertIcons,
   // 添加游戏世界参数
-  parallelWorlds = {
-    worlds: ["默认世界", "幻想世界", "科幻世界", "古代世界"],
-    gmCommands: {},
-    defaultWorld: '默认世界'
-  },
+  // parallelWorlds = {
+  //   worlds: ["默认世界", "幻想世界", "科幻世界", "古代世界"],
+  //   gmCommands: {},
+  //   defaultWorld: '默认世界'
+  // },
   hideTopControls,
   enableAllCreditsPricing,
 }) => {
@@ -30,7 +30,7 @@ const ItemManageTab = ({
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // 使用 parallelWorlds.worlds 代替原来的 parallelWorlds
-  const worlds = parallelWorlds.worlds || ["默认世界", "幻想世界", "科幻世界", "古代世界"];
+  const worlds = settings.parallelWorlds || ["默认世界", "幻想世界", "科幻世界", "古代世界"];
   const [formData, setFormData] = useState({
     name: '',
     id: '',
@@ -39,7 +39,7 @@ const ItemManageTab = ({
     price: {},
     icon: '',
     // 添加新字段
-    parallelWorld: parallelWorlds.defaultWorld || worlds[0] || '默认世界', // 使用默认游戏世界
+    parallelWorld: settings.defaultParallelWorld || worlds[0] || '默认世界', // 使用默认游戏世界
     recipes: [], // 合成配方字段，每个配方包含多个道具
     gmCommand: '', // GM 命令字段
     lootBoxes: [],
@@ -73,14 +73,16 @@ const ItemManageTab = ({
     items: [],
     currentItem: '',
     itemCount: 1,
-    dropRate: 0.00
+    dropRate: 0.01
   });
   const [editingLootBoxIndex, setEditingLootBoxIndex] = useState(null);
   const [lootBoxSearch, setLootBoxSearch] = useState('');
   const [showLootBoxDropdown, setShowLootBoxDropdown] = useState(false);
   const [fieldSettings, setFieldSettings] = useState(() => {
-    const savedSettings = localStorage.getItem('itemFieldSettings');
-    return savedSettings ? JSON.parse(savedSettings) : {
+    // const savedSettings = localStorage.getItem('itemFieldSettings');
+    const savedSettings = userDataManager.getUserData('itemFieldSettings');
+
+    return savedSettings ? savedSettings : {
       icon: true,
       description: true,
       category: true,
@@ -96,7 +98,9 @@ const ItemManageTab = ({
   const [currentPage, setCurrentPage] = useState(1); // 当前页码
   const [itemsPerPage, setItemsPerPage] = useState(() => {
     // 从 localStorage 中获取保存的每页道具数，如果没有则默认为 10
-    const savedItemsPerPage = localStorage.getItem('itemsPerPage');
+    // const savedItemsPerPage = localStorage.getItem('itemsPerPage');
+    const savedItemsPerPage = userDataManager.getUserData('itemsPerPage');
+
     return savedItemsPerPage ? parseInt(savedItemsPerPage, 10) : 10;
   }); // 每页道具数
 
@@ -122,7 +126,11 @@ const ItemManageTab = ({
     exportFormat: 'csv', // csv, json
     exportFilteredOnly: false
   });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
+  const [showRecipeItemNames, setShowRecipeItemNames] = useState(false);
+  const [showLootBoxItemNames, setShowLootBoxItemNames] = useState(false);
 
 
   // 添加 useEffect 来监听表单变化并自动更新 GM 命令
@@ -305,7 +313,7 @@ const ItemManageTab = ({
             items: [],
             currentItem: '',
             itemCount: 1,
-            dropRate: 0.00
+            dropRate: 0.01
           });
           setEditingLootBoxIndex(null);
           setLootBoxSearch('');
@@ -339,7 +347,7 @@ const ItemManageTab = ({
           items: [],
           currentItem: '',
           itemCount: 1,
-          dropRate: 0.00
+          dropRate: 0.01
         });
         setEditingLootBoxIndex(null);
         setLootBoxSearch('');
@@ -375,6 +383,31 @@ const ItemManageTab = ({
     };
   }, [showAddForm, editingItem, showRecipeModal, showLootBoxModal, showGmCommandModal, showFieldSettings]);
 
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // 检查是否按下了 F 键并且没有其他修饰键
+      if (event.key === 'f' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
+        // 防止在输入框中触发
+        if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'TEXTAREA') {
+          event.preventDefault();
+          // 聚焦到搜索框
+          const searchInput = document.querySelector('.item-controls input[type="text"]');
+          if (searchInput) {
+            searchInput.focus();
+          }
+        }
+      }
+    };
+
+    // 添加键盘事件监听器
+    document.addEventListener('keydown', handleKeyDown);
+
+    // 清理函数
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
 
   // 在组件中添加判断是否为移动端的函数
   const isMobileDevice = () => {
@@ -395,6 +428,35 @@ const ItemManageTab = ({
   // 排序和筛选后的道具列表
   const filteredAndSortedItems = useMemo(() => {
     let result = Object.entries(items);
+
+    // 搜索过滤
+    if (searchTerm) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      result = result.filter(([name, item]) => {
+        // 搜索道具名称
+        if (name.toLowerCase().includes(lowerSearchTerm)) return true;
+
+        // 搜索道具描述
+        if (item.description && item.description.toLowerCase().includes(lowerSearchTerm)) return true;
+
+        // 搜索合成配方
+        if (item.recipes && item.recipes.some(recipe =>
+          recipe.some(component =>
+            component.itemName.toLowerCase().includes(lowerSearchTerm)
+          )
+        )) return true;
+
+        // 搜索宝箱效果
+        if (item.lootBoxes && item.lootBoxes.some(lootBox =>
+          lootBox.some(component =>
+            component.itemName.toLowerCase().includes(lowerSearchTerm)
+          )
+        )) return true;
+
+        return false;
+      });
+    }
+
 
     // 类别筛选
     if (filterCategory !== '全部') {
@@ -449,7 +511,8 @@ const ItemManageTab = ({
     });
 
     return result;
-  }, [items, sortField, sortDirection, filterCategory, filterParallelWorld]);
+  }, [items, sortField, sortDirection, filterCategory, filterParallelWorld,searchTerm]);
+
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredAndSortedItems.slice(indexOfFirstItem, indexOfLastItem);
@@ -470,7 +533,8 @@ const ItemManageTab = ({
       [field]: !fieldSettings[field]
     };
     setFieldSettings(newSettings);
-    localStorage.setItem('itemFieldSettings', JSON.stringify(newSettings));
+    // localStorage.setItem('itemFieldSettings', JSON.stringify(newSettings));
+    userDataManager.setUserData('itemFieldSettings', newSettings);
   };
 
   const getFieldDisplayName = (field) => {
@@ -499,12 +563,36 @@ const ItemManageTab = ({
       count: parseInt(recipeFormData.itemCount) || 1
     };
 
-    setRecipeFormData(prev => ({
-      ...prev,
-      items: [...prev.items, newItem],
-      currentItem: '',
-      itemCount: 1
-    }));
+    setRecipeFormData(prev => {
+      // 检查该道具是否已存在于配方中
+      const existingItemIndex = prev.items.findIndex(
+        item => item.itemName === newItem.itemName
+      );
+
+      if (existingItemIndex !== -1) {
+        // 如果已存在，增加数量
+        const updatedItems = [...prev.items];
+        updatedItems[existingItemIndex] = {
+          ...updatedItems[existingItemIndex],
+          count: updatedItems[existingItemIndex].count + newItem.count
+        };
+        return {
+          ...prev,
+          items: updatedItems,
+          currentItem: '',
+          itemCount: 1
+        };
+      } else {
+        // 如果不存在，添加新项目
+        return {
+          ...prev,
+          items: [...prev.items, newItem],
+          currentItem: '',
+          itemCount: 1
+        };
+      }
+    });
+
     setItemSearch('');
     setShowDropdown(false);
   };
@@ -698,6 +786,34 @@ const ItemManageTab = ({
     } catch (error) {
       alert('网络错误');
     }
+  };
+
+  const handleCopyItem = (itemName) => {
+    const itemToCopy = items[itemName];
+    if (!itemToCopy) {
+      onShowStatus('无法找到要复制的道具');
+      return;
+    }
+
+    // 设置表单数据为被复制项的数据
+    setFormData({
+      name: `${itemName}_副本`,
+      id: itemToCopy.id,
+      description: itemToCopy.description,
+      category: itemToCopy.category || '未分类',
+      price: { ...itemToCopy.price },
+      icon: itemToCopy.icon || '',
+      parallelWorld: itemToCopy.parallelWorld || '默认世界',
+      recipes: itemToCopy.recipes ? JSON.parse(JSON.stringify(itemToCopy.recipes)) : [],
+      gmCommand: itemToCopy.gmCommand || '',
+      lootBoxes: itemToCopy.lootBoxes ? JSON.parse(JSON.stringify(itemToCopy.lootBoxes)) : [],
+    });
+
+    // 打开新增表单
+    setShowAddForm(true);
+    setEditingItem(null);
+
+    onShowStatus(`已复制道具 "${itemName}"，请修改名称后保存`);
   };
 
   // 批量删除
@@ -960,35 +1076,17 @@ const ItemManageTab = ({
   // 改进导入提示函数
   const showImportHint = () => {
     const hintMessage =
-      "CSV文件格式要求：\n\n" +
-      "必需字段：\n" +
-      "- name: 道具名称\n" +
-      "- id: 道具ID\n" +
-      "- description: 道具描述\n" +
-      "- category: 道具类别\n\n" +
-      "可选字段：\n" +
-      "- icon: 图标URL\n" +
-      "- parallelWorld: 游戏世界\n" +
-      "- gmCommand: GM命令\n" +
-      "- recipes: 合成配方（JSON格式数组）\n" +
-      "- lootBoxes: 宝箱效果（JSON格式数组）\n" +
-      "- 积分类型字段: 对应积分价格\n\n" +
-      "注意事项：\n" +
-      "1. 字段顺序可以任意排列\n" +
-      "2. recipes和lootBoxes字段需要严格的JSON格式\n" +
-      "3. 可以下载模板文件作为参考\n" +
-      "4. 重复ID的道具将被跳过";
+      "导入格式说明：\n\n" +
+      "请使用导出功能获取道具数据csv文件，以查看表头字段及内容格式。\n";
 
-    const userChoice = window.confirm(
-      hintMessage +
-      "\n\n点击确定后选择CSV文件进行导入，点击取消可下载导入模板。"
-    );
+    const userChoice = window.confirm(hintMessage);
 
     if (userChoice) {
       document.getElementById('csv-file').click();
-    } else {
-      downloadImportTemplate();
     }
+    // else {
+      // downloadImportTemplate();
+    // }
   };
 
 
@@ -1389,14 +1487,6 @@ const ItemManageTab = ({
 
 
 
-
-
-
-
-
-
-
-
   const addPriceField = (creditType) => {
     setFormData({
       ...formData,
@@ -1579,15 +1669,6 @@ const ItemManageTab = ({
                       handleSelectAllOperations('selectAllPage');
                       setIsOpen(false);
                     }}
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      padding: '5px 10px',
-                      textAlign: 'left',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
                   >
                     选中当前页 ({status.currentPageItemsCount})
                   </button>
@@ -1596,15 +1677,6 @@ const ItemManageTab = ({
                     onClick={() => {
                       handleSelectAllOperations('deselectPage');
                       setIsOpen(false);
-                    }}
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      padding: '5px 10px',
-                      textAlign: 'left',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer'
                     }}
                   >
                     取消当前页 ({status.currentPageSelected})
@@ -1616,15 +1688,6 @@ const ItemManageTab = ({
                       handleSelectAllOperations('selectAllAll');
                       setIsOpen(false);
                     }}
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      padding: '5px 10px',
-                      textAlign: 'left',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
                   >
                     选中全部 ({status.filteredItemsCount})
                   </button>
@@ -1633,15 +1696,6 @@ const ItemManageTab = ({
                     onClick={() => {
                       handleSelectAllOperations('deselectAll');
                       setIsOpen(false);
-                    }}
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      padding: '5px 10px',
-                      textAlign: 'left',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer'
                     }}
                   >
                     取消全部
@@ -1656,17 +1710,8 @@ const ItemManageTab = ({
                       setSelectedItems([...otherSelected, ...invertedPageSelection]);
                       setIsOpen(false);
                     }}
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      padding: '5px 10px',
-                      textAlign: 'left',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
                   >
-                    当前页反选
+                    反选当前页
                   </button>
                 )}
                 {status.totalSelected > 0 && (
@@ -1677,6 +1722,60 @@ const ItemManageTab = ({
                         .filter(name => !selectedItems.includes(name)));
                       setIsOpen(false);
                     }}
+                  >
+                    反选全部页
+                  </button>
+                )}
+                {/* 添加批量删除按钮 */}
+                {status.totalSelected > 0 && (
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      setTimeout(() => {
+                        if (window.confirm(`确定要删除选中的${selectedItems.length}个道具吗？\n注意：该操作不可恢复！`)) {
+                          handleBatchDelete();
+                        }
+                      }, 100);
+                    }}
+                    style={{
+                      color: '#dc3545'
+                    }}
+                  >
+                    批量删除 ({selectedItems.length})
+                  </button>
+                )}
+                {/* 添加批量转换图标按钮 */}
+                {status.totalSelected > 0 && (
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      setTimeout(() => {
+                        handleBatchConvertIcons();
+                      }, 100);
+                    }}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: '5px 10px',
+                      textAlign: 'left',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                    title="批量下载png图片链接并转化为本地url"
+                  >
+                    批量转换图标/png2url ({selectedItems.length})
+                  </button>
+                )}
+                {/*// 添加批量生成 GM 命令按钮*/}
+                {status.totalSelected > 0 && (
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      setTimeout(() => {
+                        handleBatchGenerateGmCommands();
+                      }, 100);
+                    }}
                     style={{
                       display: 'block',
                       width: '100%',
@@ -1687,9 +1786,10 @@ const ItemManageTab = ({
                       cursor: 'pointer'
                     }}
                   >
-                    全部页反选
+                    批量生成GM命令 ({selectedItems.length})
                   </button>
                 )}
+
               </div>
             )}
           </div>
@@ -1770,7 +1870,48 @@ const ItemManageTab = ({
   };
 
   const renderIcon = (icon, name, size = 24) => {
-    if (!icon) return name;
+    // if (!icon) return name;
+    if (!icon || icon === "-") {
+      // 如果 icon 为空或为 "-"，显示名称首字母
+      return (
+        <span
+          className="icon-placeholder"
+          title={name}
+          style={{
+            // display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: `${size}px`,
+            height: `${size}px`,
+            backgroundColor: '#f0f0f0',
+            borderRadius: '4px',
+            fontWeight: 'bold',
+            color: '#666',
+            fontSize: `${size * 0.4}px`
+          }}
+        >
+          {name?.charAt(0).toUpperCase()}
+        </span>
+      );
+    }
+    // 检查是否为 emoji（Unicode 表情符号）
+    // const isEmoji = /^[\uD83C-\uDBFF\uDC00-\uDFFF\u2702-\u27B0\u24C2-\uFDEF\u2600-\u26FF\u2300-\u23FF\u2190-\u21FF]{1,4}$/.test(icon);
+    // if (isEmoji) {
+    //   return (
+    //     <span
+    //       className="icon-emoji"
+    //       title={name}
+    //       style={{
+    //         fontSize: `${size}px`,
+    //         lineHeight: 1,
+    //         display: 'inline-block',
+    //         verticalAlign: 'middle'
+    //       }}
+    //     >
+    //       {icon}
+    //     </span>
+    //   );
+    // }
 
     if (icon.startsWith('http') || icon.startsWith('data:image')) {
       // 处理图片URL
@@ -1804,7 +1945,9 @@ const ItemManageTab = ({
             fontSize: `${size * 0.4}px`
           }}
         >
-          {name.charAt(0).toUpperCase()}
+          {icon}
+          {/*{icon || icon !=="-" ? icon : name.charAt(0).toUpperCase()}*/}
+          {/*{name.charAt(0).toUpperCase()}*/}
         </span>
       );
     }
@@ -1948,19 +2091,23 @@ const ItemManageTab = ({
   // 在 ItemManageTab 组件中添加 GM 命令生成函数
   const generateGmCommand = (world, item) => {
     // 从 props 获取 GM 命令配置
-    const gmCommands = parallelWorlds.gmCommands || {};
-    const firstCommandData = Object.values(gmCommands)[0];
-    const gameWorld = firstCommandData ? firstCommandData.gameWorld : '';
-    // 若gameWorld与world不一致，则返回空字符串
-    if (gameWorld !== world) {
-      return '';
+    const gmCommands = settings.gmCommands || {};
+
+    // 按orderNo排序获取该世界的命令列表
+    const worldCommands = Object.entries(gmCommands)
+      .filter(([id, command]) => command.gameWorld === world)
+      .sort((a, b) => (a[1].orderNo || 0) - (b[1].orderNo || 0));
+
+    // 获取该世界的第一个命令作为默认模板
+    if (worldCommands.length > 0) {
+      const defaultCommand = worldCommands[0][1];
+      if (defaultCommand.gmCommand) {
+        return defaultCommand.gmCommand.replace(/{item}/g, item || '');
+      }
     }
-    const cmdTemplate = firstCommandData ? firstCommandData.gmCommand : '';
 
-    if (!cmdTemplate) return '';
-
-    return cmdTemplate
-      .replace(/{item}/g, item || '')
+    // 如果没有找到指定世界的命令，返回空字符串
+    return '';
   };
 
   // 提取GM命令模板中的变量
@@ -1986,6 +2133,55 @@ const ItemManageTab = ({
     });
     return command;
   };
+  // 批量生成并更新选中道具的 GM 命令
+  const handleBatchGenerateGmCommands = async () => {
+    // 只处理选中的道具
+    const itemsToUpdate = Object.entries(items)
+      .filter(([name, item]) => selectedItems.includes(name));
+
+    if (itemsToUpdate.length === 0) {
+      onShowStatus('没有选中任何道具');
+      return;
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const [name, item] of itemsToUpdate) {
+      try {
+        // 生成 GM 命令
+        const gmCommand = generateGmCommand(item.parallelWorld || '默认世界', item.id);
+
+        // 如果生成的命令为空或者与现有命令相同，则跳过更新
+        if (!gmCommand || gmCommand === item.gmCommand) {
+          continue;
+        }
+
+        // 更新道具的 GM 命令
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/items/${name}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...item,
+            gmCommand: gmCommand
+          })
+        });
+
+        if (response.ok) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (error) {
+        failCount++;
+        console.error(`更新道具${name}的GM命令失败:`, error);
+      }
+    }
+
+    onShowStatus(`批量生成GM命令完成: 成功${successCount}个，失败${failCount}个`);
+    onUpdateItem(); // 刷新道具列表
+  };
+
 
   // 在其他函数后面添加
   const toggleRowExpansion = (itemName) => {
@@ -2009,9 +2205,15 @@ const ItemManageTab = ({
       return;
     }
 
+    // 如果爆率为0，则不添加
+    const newRate = parseFloat(lootBoxFormData.dropRate) || 0;
+    if (newRate === 0) {
+      onShowStatus('爆率不能为0');
+      return;
+    }
+
     // 计算当前总爆率
     const currentTotalRate = lootBoxFormData.items.reduce((sum, item) => sum + parseFloat(item.dropRate || 0), 0);
-    const newRate = parseFloat(lootBoxFormData.dropRate) || 0;
 
     if (currentTotalRate + newRate > 1) {
       onShowStatus('爆率总和不能超过100%');
@@ -2024,13 +2226,39 @@ const ItemManageTab = ({
       dropRate: newRate
     };
 
-    setLootBoxFormData(prev => ({
-      ...prev,
-      items: [...prev.items, newItem],
-      currentItem: '',
-      itemCount: 1,
-      dropRate: 0.00
-    }));
+    setLootBoxFormData(prev => {
+      // 检查该道具是否已存在于宝箱效果中
+      const existingItemIndex = prev.items.findIndex(
+        item => item.itemName === newItem.itemName
+      );
+
+      if (existingItemIndex !== -1) {
+        // 如果已存在，更新数量和爆率
+        const updatedItems = [...prev.items];
+        updatedItems[existingItemIndex] = {
+          ...updatedItems[existingItemIndex],
+          count: updatedItems[existingItemIndex].count + newItem.count,
+          dropRate: updatedItems[existingItemIndex].dropRate + newItem.dropRate
+        };
+        return {
+          ...prev,
+          items: updatedItems,
+          currentItem: '',
+          itemCount: 1,
+          dropRate: 0.01
+        };
+      } else {
+        // 如果不存在，添加新项目
+        return {
+          ...prev,
+          items: [...prev.items, newItem],
+          currentItem: '',
+          itemCount: 1,
+          dropRate: 0.01
+        };
+      }
+    });
+
     setLootBoxSearch('');
     setShowLootBoxDropdown(false);
   };
@@ -2097,7 +2325,7 @@ const ItemManageTab = ({
       items: [],
       currentItem: '',
       itemCount: 1,
-      dropRate: 0.00
+      dropRate: 0.01
     });
     setShowLootBoxModal(false);
     setEditingLootBoxIndex(null);
@@ -2111,7 +2339,7 @@ const ItemManageTab = ({
       items: [...lootBox],
       currentItem: '',
       itemCount: 1,
-      dropRate: 0.00
+      dropRate: 0.01
     });
     setEditingLootBoxIndex(index);
     setShowLootBoxModal(true);
@@ -2176,7 +2404,7 @@ const ItemManageTab = ({
       ...prev,
       currentItem: '',
       itemCount: 1,
-      dropRate: 0.00
+      dropRate: 0.01
     }));
     setLootBoxSearch('');
   };
@@ -2204,6 +2432,16 @@ const ItemManageTab = ({
       </select>
     </div>
   );
+  const clearSearch = () => {
+    setSearchTerm('');
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      clearSearch();
+      e.target.blur();
+    }
+  };
 
   return (
     <div className="item-manage-tab">
@@ -2214,53 +2452,84 @@ const ItemManageTab = ({
           {/* 控制按钮 */}
           <div className="item-controls">
 
+            <div style={{ position: 'relative', display: 'inline-block', marginRight: '10px' }}>
+              <input
+                type="text"
+                placeholder="搜索道具名称、描述、配方、宝箱效果..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
+                style={{
+                  padding: '5px 25px 5px 5px',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc',
+                  width: isMobile ? '100px' : '250px',
+                  height: '25px',
+                }}
+              />
+              {searchTerm && (
+                <button
+                  onClick={clearSearch}
+                  style={{
+                    position: 'absolute',
+                    right: '5px',
+                    top: '35%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    padding: '0',
+                    width: '16px',
+                    height: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#999',
+                  }}
+                  title="清除搜索"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
+            {isMobile?(
+                <button onClick={() => setShowFilters(!showFilters)}>
+                  ☰
+                </button>
+            ):(
+             renderItemsFilters()
+            )}
+
+          </div>
+
+          <div className='item-controls'>
             <button onClick={() => {
               setShowAddForm(true);
               // 设置默认游戏世界
               setFormData(prev => ({
                 ...prev,
-                parallelWorld: parallelWorlds.defaultWorld || worlds[0] || '默认世界'
+                parallelWorld: settings.defaultParallelWorld || worlds[0] || '默认世界'
               }));
             }}
              title="新增道具"
             > ✙ </button>
-            {/*<button onClick={() => setShowAddForm(true)}>新增道具</button>*/}
-            <button onClick={handleBatchDelete} disabled={selectedItems.length === 0} title="批量删除">
-              ✖ ({selectedItems.length})
-            </button>
-            {/* 批量转换图标按钮 */}
-            <button onClick={handleBatchConvertIcons} disabled={selectedItems.length === 0} title="批量下载将png链接转为本地url (png2url)">
-              🌐 ({selectedItems.length})
-            </button>
-
-            {/* CSV导入 */}
-
-            <button onClick={showImportHint} className="csv-import-button" title="从CSV文件导入道具信息">
-              📥
-            </button>
-            <input
-              id="csv-file"
-              type="file"
-              accept=".csv"
-              onChange={handleCsvImport}
-              style={{display: 'none'}}
-            />
-
-            <button onClick={handleDefaultCsvExport} title="导出为CSV文件">📤</button>
-            {/*{ExportOptionsModal()}*/}
-
-
             <div className="field-settings-container" style={{ position: 'relative', display: 'flex',flexDirection: 'row' }}>
-              <button
-                className="field-settings-button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowFieldSettings(!showFieldSettings);
-                }}
-                title="显示字段设置"
-              >
-                🔳
-              </button>
+              {!isMobile && (
+                <button
+                  className="field-settings-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowFieldSettings(!showFieldSettings);
+                  }}
+                  title="显示字段设置"
+                >
+                  🔳
+                </button>
+              )}
 
               {showFieldSettings && (
                 <div className="field-settings-menu" style={{
@@ -2303,17 +2572,18 @@ const ItemManageTab = ({
               )}
             </div>
 
-            {isMobile?(
-                <button onClick={() => setShowFilters(!showFilters)}>
-                  ☰
-                </button>
-            ):(
-             renderItemsFilters()
-            )}
+            <button onClick={showImportHint} className="csv-import-button" title="从CSV文件导入道具信息">
+              📥
+            </button>
+            <input
+              id="csv-file"
+              type="file"
+              accept=".csv"
+              onChange={handleCsvImport}
+              style={{display: 'none'}}
+            />
+            <button onClick={handleDefaultCsvExport} title="导出为CSV文件">📤</button>
 
-          </div>
-
-          <div className='item-controls'>
             <button onClick={onAddItem} title="刷新">⟳</button>
             <button className="tasksys-settings-button" onClick={() => setIsSettingsModalOpen(!isSettingsModalOpen)}>
               ⚙️️
@@ -2347,7 +2617,7 @@ const ItemManageTab = ({
             {/*    checked={selectedItems.length > 0 && selectedItems.length === filteredAndSortedItems.length}*/}
             {/*  />*/}
             {/*</th>*/}
-             {fieldSettings.icon && <th>图标</th>}
+            {fieldSettings.icon && <th>图标</th>}
             <th onClick={() => handleSort('name')} style={{cursor: 'pointer'}}>
               道具名称 {getSortIcon('name')}
             </th>
@@ -2373,8 +2643,14 @@ const ItemManageTab = ({
                 </th>}
                 {fieldSettings.gmCommand && <th>GM命令</th>}
                 {fieldSettings.price && <th>兑换价格</th>}
-                {fieldSettings.recipes && <th>合成配方</th>}
-                {fieldSettings.lootBoxes && <th>宝箱效果</th>}
+                {fieldSettings.recipes && <th onClick={() => setShowRecipeItemNames(!showRecipeItemNames)} style={{cursor: 'pointer'}} title="合成道具项的材料配方">
+                  合成配方
+                </th>}
+                {fieldSettings.lootBoxes && <th onClick={() => setShowLootBoxItemNames(!showLootBoxItemNames)} style={{cursor: 'pointer'}} title="打开宝箱类道具的掉落效果">
+                  宝箱效果
+                </th>}
+                {/*{fieldSettings.recipes && <th>合成配方</th>}*/}
+                {/*{fieldSettings.lootBoxes && <th>宝箱效果</th>}*/}
                 <th>操作</th>
               </>
             )}
@@ -2414,9 +2690,10 @@ const ItemManageTab = ({
                       onChange={() => handleSelectItem(name)}
                     />
                   </td>
-
+                  
                   {fieldSettings.icon && <td>
-                    {info.icon ? renderIcon(info.icon, name, 24) : '-'}
+                    {renderIcon(info.icon, name, 38)}
+                    {/*{info.icon ? renderIcon(info.icon, name, 38) : '-'}*/}
                   </td>}
 
                   <td>{name}</td>
@@ -2451,8 +2728,10 @@ const ItemManageTab = ({
                               <div key={recipeIndex} className="recipe-item-mini">
                                 <span className="recipe-label">配方{recipeIndex + 1}:</span>
                                 {recipe.map((item, itemIndex) => (
-                                  <span key={itemIndex} className="recipe-component">
-                                    {item.itemName}×{item.count}
+                                  <span key={itemIndex} className="recipe-component" style={{textAlign: 'center',alignItems: 'center',fontSize:'10px'}} title={ item.itemName + '×'+ item.count}>
+                                    {renderIcon(items[item.itemName]?.icon,item.itemName)}
+                                    {showRecipeItemNames && <br />}
+                                    {showRecipeItemNames && item.itemName}×{item.count}
                                   </span>
                                 ))}
                               </div>
@@ -2469,8 +2748,12 @@ const ItemManageTab = ({
                               <div key={lootBoxIndex} className="loot-box-item-mini">
                                 <span className="loot-box-label">效果{lootBoxIndex + 1}:</span>
                                 {lootBox.map((item, itemIndex) => (
-                                  <span key={itemIndex} className="loot-box-component">
-                                    {item.itemName}×{item.count} ({Math.round(parseFloat(item.dropRate) *10000)/100}%)
+                                  <span key={itemIndex} className="loot-box-component" title={ item.itemName + '×' + item.count + '('+ Math.round(parseFloat(item.dropRate) *10000)/100 + '%)'}>
+                                    {renderIcon(items[item.itemName]?.icon, item.itemName)}
+                                    {showLootBoxItemNames && <br />}
+                                    {showLootBoxItemNames && item.itemName}
+                                    <br />
+                                    ×{item.count} ({Math.round(parseFloat(item.dropRate) *10000)/100}%)
                                   </span>
                                 ))}
                               </div>
@@ -2480,7 +2763,7 @@ const ItemManageTab = ({
                           <span>-</span>
                         )}
                       </td>}
-                      <td>
+                      <td className="items-operations">
                         <button onClick={() => {
                           setEditingItem(name);
                           setFormData({
@@ -2495,12 +2778,9 @@ const ItemManageTab = ({
                             gmCommand: info.gmCommand || '',
                             lootBoxes: info.lootBoxes || [],
                           });
-                        }}>
-                          编辑
-                        </button>
-                        <button onClick={() => handleDeleteItem(name)}>
-                          删除
-                        </button>
+                        }} title="编辑">✎</button>
+                        <button onClick={() => handleCopyItem(name)} title="复制">✂</button>
+                        <button onClick={() => handleDeleteItem(name)} title="删除">❌</button>
                       </td>
                     </>
                   )}
@@ -2574,6 +2854,8 @@ const ItemManageTab = ({
                             )}
                           </span>
                         </div>
+
+
                         <div className="action-buttons">
                           <button
                             onClick={(e) => {
@@ -2598,7 +2880,8 @@ const ItemManageTab = ({
                           <button onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteItem(name);
-                          }}>
+                          }}
+                          >
                             删除
                           </button>
                         </div>
@@ -2689,7 +2972,9 @@ const ItemManageTab = ({
             const newItemsPerPage = Number(e.target.value);
             setItemsPerPage(newItemsPerPage);
             // 保存到 localStorage
-            localStorage.setItem('itemsPerPage', newItemsPerPage.toString());
+            // localStorage.setItem('itemsPerPage', newItemsPerPage.toString());
+            userDataManager.setUserData('itemsPerPage', newItemsPerPage.toString());
+
             setCurrentPage(1); // 重置到第一页
             setInputPage(1); // 同步更新输入框的值
           }}
@@ -2734,8 +3019,10 @@ const ItemManageTab = ({
                   onChange={(e) => setFormData({...formData, icon: e.target.value})}
                   placeholder="图片URL"
                   style={{ flex: 1,width: '330px' }}
+
                 />
                 <a
+                  title="在线图标库"
                   href="https://icon-sets.iconify.design/"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -2746,7 +3033,7 @@ const ItemManageTab = ({
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  在线图标库
+                  🌐
                 </a>
               </div>
             </div>
@@ -2758,9 +3045,9 @@ const ItemManageTab = ({
                     <button
                       onClick={handleManualConvertIcon}
                       style={{ fontSize: '12px', padding: '2px 8px' }}
-                      title="点击此按钮将png图片下载并转换为本地Base64URL图标"
+                      title="将png图片下载并转为本地Base64URL图标"
                     >
-                      转为本地Base64URL图标
+                      转Base64URL
                     </button>
                   </div>
                 )}
@@ -2823,7 +3110,7 @@ const ItemManageTab = ({
                 <button
                   onClick={() => {
                     // 初始化模板数据 (根据新的数据结构)
-                    const gmCommands = parallelWorlds.gmCommands || {};
+                    const gmCommands = settings.gmCommands || {};
                     const templates = [];
 
                     // 将配置中的GM命令转换为模板数组 (新结构)
@@ -2949,7 +3236,9 @@ const ItemManageTab = ({
                       </div>
                       <div className="recipe-components">
                         {recipe.map((item, itemIndex) => (
-                          <span key={itemIndex} className="recipe-component-tag">
+                          <span key={itemIndex} className="recipe-component-tag" style={{fontSize: '10px', backgroundColor: 'transparent', color:'black'}}>
+                            {renderIcon(items[item.itemName].icon, item.itemName, 36)}
+                            <br />
                             {item.itemName} ×{item.count}
                           </span>
                         ))}
@@ -2962,7 +3251,8 @@ const ItemManageTab = ({
               )}
             </div>
 
-            <div className="form-row-vertical">
+            {formData.category === '宝箱类' && (
+              <div className="form-row-vertical">
               <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h4>宝箱效果</h4>
                 <button
@@ -2971,7 +3261,7 @@ const ItemManageTab = ({
                       items: [],
                       currentItem: '',
                       itemCount: 1,
-                      dropRate: 0.00
+                      dropRate: 0.01
                     });
                     setEditingLootBoxIndex(null);
                     setShowLootBoxModal(true);
@@ -3005,8 +3295,12 @@ const ItemManageTab = ({
                       </div>
                       <div className="loot-box-components">
                         {lootBox.map((item, itemIndex) => (
-                          <span key={itemIndex} className="loot-box-component-tag">
-                            {item.itemName} ×{item.count} ({(item.dropRate * 100).toFixed(3)}%)
+                          <span key={itemIndex} className="loot-box-component-tag" style={{fontSize: '10px',backgroundColor: 'transparent', color:'black'}}>
+                            {renderIcon(items[item.itemName].icon, item.itemName, 36)}
+                            <br />
+                            {item.itemName}
+                            <br  />
+                            ×{item.count} ({(item.dropRate * 100).toFixed(3)}%)
                           </span>
                         ))}
                       </div>
@@ -3017,6 +3311,7 @@ const ItemManageTab = ({
                 <p className="no-loot-boxes">暂无开箱效果</p>
               )}
             </div>
+            )}
 
           </div>
           <div className="form-layout">
@@ -3157,9 +3452,6 @@ const ItemManageTab = ({
           <div className="modal-content recipe-modal" style={{ width: '75%' }}>
             <h4>{editingRecipeIndex !== null ? `编辑配方 ${editingRecipeIndex + 1}` : '添加合成配方'}</h4>
 
-
-
-
             <div className="form-group">
               <label>添加道具：</label>
               <div className="item-search-wrapper">
@@ -3178,7 +3470,8 @@ const ItemManageTab = ({
                         className="recipe-item-dropdown"
                         style={{
                           maxHeight: '200px',
-                          overflowY: 'auto'
+                          overflowY: 'auto',
+                          textAlign: 'left',
                         }}
                     >
                       {filteredItems.map(itemName => (
@@ -3199,7 +3492,7 @@ const ItemManageTab = ({
                             e.target.style.color = '';
                           }}
                         >
-                          {itemName}
+                          {renderIcon(items[itemName].icon, itemName, 24)} {itemName}
                         </div>
                       ))}
                     </div>
@@ -3241,31 +3534,60 @@ const ItemManageTab = ({
                 <div className="recipe-items-list">
                   {recipeFormData.items.map((item, index) => (
                     <div key={index} className="recipe-item-row">
-                      <span>{item.itemName} ×{item.count}</span>
-                      <button
-                        onClick={() => fillRecipeFormWithItem(item)}
-                        className="btn btn-secondary btn-sm"
-                        title="填充到表单"
-                        style={{
-                          minWidth: '30px',
-                          padding: '0 8px',
-                          marginRight: '5px',
-                          backgroundColor: '#027cff',
-                        }}
-                      >
-                        +
-                      </button>
-                      <button
-                        onClick={() => removeRecipeItem(index)}
-                        className="btn btn-danger btn-sm"
-                        style={{
-                          minWidth: '30px',
-                          padding: '0 8px',
-                          marginRight: '5px',
-                        }}
-                      >
-                        ×
-                      </button>
+                      <div style={{display: 'flex', flexDirection:'column', alignItems:'center'}}>
+                        <div style={{display: 'flex', alignItems:'center', flex:1}}>
+                          <span
+                              title={`${item.itemName} × ${item.count}`}
+                              style={{
+                                height: '20%',
+                                padding: '0 1px',
+                                // backgroundColor: '#027cff',
+                                // display: 'block',
+                                // width: '100%',
+                              }}
+                          >
+                            {renderIcon(items[item.itemName].icon, item.itemName, 36)}
+                          </span>
+
+                          <div>
+                            <button
+                              onClick={() => fillRecipeFormWithItem(item)}
+                              className="btn btn-secondary btn-sm"
+                              title="填充到表单"
+                              style={{
+                                height: '30%',
+                                padding: '0 1px',
+                                marginBottom: '1px',
+                                // color: 'black',
+                                backgroundColor: '#027cff',
+                                display: 'block',
+                                width: '100%',
+                              }}
+                            >
+                              +
+                            </button>
+                            <button
+                              onClick={() => removeRecipeItem(index)}
+                              className="btn btn-danger btn-sm"
+                              style={{
+                                height: '30%',
+                                padding: '0 1px',
+                                // color: 'black',
+                                backgroundColor: '#dc3545',
+                                display: 'block',
+                                width: '100%',
+                              }}
+                            >
+                              -
+                            </button>
+                          </div>
+                        </div>
+
+                        <div style={{ marginRight: '15px', marginBottom:'15px', fontSize: '10px'}}>
+                          {`${item.itemName} ×${item.count}`}
+                        </div>
+
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -3274,9 +3596,9 @@ const ItemManageTab = ({
               )}
             </div>
 
-            <div className="modal-actions">
+            <div>
               <button onClick={handleSaveRecipe} className="btn btn-success">
-                保存配方
+                保存
               </button>
               <button
                 onClick={() => {
@@ -3321,8 +3643,10 @@ const ItemManageTab = ({
                     <div
                       className="loot-box-item-dropdown"
                       style={{
+                        textAlign: 'left',
                         maxHeight: '200px',
-                        overflowY: 'auto'
+                        overflowY: 'auto',
+                        alignText: 'left',
                       }}
                     >
                       {filteredLootBoxItems.map(itemName => (
@@ -3343,7 +3667,7 @@ const ItemManageTab = ({
                             e.target.style.color = '';
                           }}
                         >
-                          {itemName}
+                          {renderIcon(items[itemName].icon, itemName, 36)} {itemName}
                         </div>
                       ))}
                     </div>
@@ -3379,6 +3703,7 @@ const ItemManageTab = ({
                 />
                 <span>({(lootBoxFormData.dropRate * 100).toFixed(3)}%)</span>
               </div>
+
               <button
                 onClick={handleAddLootBoxItem}
                 className="btn btn-primary"
@@ -3401,32 +3726,65 @@ const ItemManageTab = ({
                 <div className="loot-box-items-list">
                   {lootBoxFormData.items.map((item, index) => (
                     <div key={index} className="loot-box-item-row">
-                      <span>{item.itemName} ×{item.count} ({(item.dropRate * 100).toFixed(3)}%)</span>
-                      <button
-                        onClick={() => fillLootBoxFormWithItem(item)}
-                        className="btn btn-secondary btn-sm"
-                        title="填充到表单"
-                        style={{
-                          minWidth: '30px',
-                          padding: '0 8px',
-                          marginRight: '5px',
-                          backgroundColor: '#027cff',
-                        }}
-                      >
-                        +
-                      </button>
-                      <button
-                        onClick={() => removeLootBoxItem(index)}
-                        className="btn btn-danger btn-sm"
-                        style={{
-                          minWidth: '30px',
-                          padding: '0 8px',
-                          marginRight: '5px'
-                        }}
-                      >
-                        ×
-                      </button>
+                      <div style={{display: 'flex', flexDirection:'column', alignItems:'center'}}>
+                        <div style={{display: 'flex', alignItems:'center', flex:1}}>
+                          <span
+                              title={`${item.itemName} × ${item.count}`}
+                              style={{
+                                height: '20%',
+                                padding: '0 1px',
+                                // backgroundColor: '#027cff',
+                                // display: 'block',
+                                // width: '100%',
+                              }}
+                          >
+                            {renderIcon(items[item.itemName].icon, item.itemName, 36)}
+                          </span>
+                          <div>
+                            <button
+                              onClick={() => fillLootBoxFormWithItem(item)}
+                              className="btn btn-secondary btn-sm"
+                              title="填充到表单"
+                              style={{
+                                height: '30%',
+                                padding: '0 1px',
+                                marginBottom: '1px',
+                                // color: 'black',
+                                backgroundColor: '#027cff',
+                                display: 'block',
+                                width: '100%',
+                              }}
+                            >
+                              +
+                            </button>
+                            <button
+                              onClick={() => removeLootBoxItem(index)}
+                              className="btn btn-danger btn-sm"
+                              style={{
+                                height: '30%',
+                                padding: '0 1px',
+                                // color: 'black',
+                                backgroundColor: '#dc3545',
+                                display: 'block',
+                                width: '100%',
+                              }}
+                            >
+                              -
+                            </button>
+                          </div>
 
+
+
+
+                        </div>
+
+                        <div style={{marginRight:'15px', marginBottom:'15px',fontSize:'10px'}}>
+                          {item.itemName}
+                          <br />
+                          ×{item.count} ({(item.dropRate * 100).toFixed(3)}%)
+                        </div>
+
+                      </div>
                     </div>
                   ))}
                   <div className="total-rate">
@@ -3438,7 +3796,7 @@ const ItemManageTab = ({
               )}
             </div>
 
-            <div className="modal-actions">
+            <div>
               <button onClick={handleSaveLootBox} className="btn btn-success">
                 保存开箱效果
               </button>
@@ -3449,7 +3807,7 @@ const ItemManageTab = ({
                     items: [],
                     currentItem: '',
                     itemCount: 1,
-                    dropRate: 0.00
+                    dropRate: 0.01
                   });
                   setEditingLootBoxIndex(null);
                   setLootBoxSearch('');

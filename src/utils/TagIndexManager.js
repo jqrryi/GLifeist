@@ -1,3 +1,5 @@
+import userDataManager from './userDataManager';
+
 class TagIndexManager {
   constructor() {
     this.storageKey = 'markdown-tag-index';
@@ -7,9 +9,12 @@ class TagIndexManager {
   // 从localStorage加载索引
   loadIndexFromStorage() {
     try {
-      const data = localStorage.getItem(this.storageKey);
+      // const data = localStorage.getItem(this.storageKey);
+      const data = userDataManager.getUserData(this.storageKey);
+      // console.log('加载标签索引:', this.storageKey, data)
+
       if (data) {
-        return JSON.parse(data);
+        return data;
       }
     } catch (error) {
       console.warn('加载标签索引失败，将重新构建:', error);
@@ -20,7 +25,9 @@ class TagIndexManager {
   // 保存索引到localStorage
   saveIndexToStorage() {
     try {
-      localStorage.setItem(this.storageKey, JSON.stringify(this.tagIndex));
+      // localStorage.setItem(this.storageKey, JSON.stringify(this.tagIndex));
+      userDataManager.setUserData(this.storageKey, this.tagIndex);
+
     } catch (error) {
       console.error('保存标签索引失败:', error);
     }
@@ -47,6 +54,7 @@ class TagIndexManager {
           tagMap.get(tag).push({
             paragraphIndex: lineIndex,
             paragraphContent: line,
+            lineNumber: lineIndex,
             context: line.substring(contextStart, contextEnd),
             matchPosition: position
           });
@@ -86,7 +94,7 @@ class TagIndexManager {
     };
 
     this.saveIndexToStorage();
-    console.log('标签索引已更新:', fileId);
+    // console.log('标签索引已更新:', fileId);
   }
 
   // 从索引中移除文件

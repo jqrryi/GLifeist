@@ -1,5 +1,5 @@
 // src/components/Plant.js
-import React, { useState, useMemo, useEffect } from 'react';
+import React, {useState, useMemo, useEffect, useRef} from 'react';
 import CONFIG from '../config';
 import {useLogs} from "../contexts/LogContext";
 
@@ -18,8 +18,13 @@ const Plant = ({
   const [sortDirection, setSortDirection] = useState('asc');
   const [filterCategory, setFilterCategory] = useState('全部');
   const [craftCount, setCraftCount] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [visibleRecipeItems, setVisibleRecipeItems] = useState({});
 
   const { addLog } = useLogs();
+  const filterButtonRef = useRef(null);
 
   useEffect(() => {
     if (selectedItem) {
@@ -38,19 +43,31 @@ const Plant = ({
       if (e.key === 'Escape' && selectedItem) {
         setSelectedItem(null);
         setCraftCount(1); // 重置数量
+        return;
+      }
+
+      // 检查是否按下了 F 键并且没有其他修饰键
+      if (e.key === 'f' && !e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
+        // 防止在输入框中触发
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          // 聚焦到搜索框
+          const searchInput = document.querySelector('.search-control input[type="text"]');
+          if (searchInput) {
+            searchInput.focus();
+          }
+        }
       }
     };
 
     // 添加键盘事件监听器
-    if (selectedItem) {
-      document.addEventListener('keydown', handleKeyDown);
-    }
+    document.addEventListener('keydown', handleKeyDown);
 
     // 清理函数：移除事件监听器
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedItem]); // 依赖 selectedItem 状态
+  }, [selectedItem]);
 
 
   // 获取所有类别
@@ -90,6 +107,36 @@ const Plant = ({
         });
       }
     });
+
+    // 搜索过滤
+    if (searchTerm) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      result = result.filter(({ itemName, itemData }) => {
+        // 搜索道具名称
+        if (itemName.toLowerCase().includes(lowerSearchTerm)) return true;
+
+        // 搜索道具描述
+        if (itemData.description && itemData.description.toLowerCase().includes(lowerSearchTerm)) return true;
+
+        // 搜索合成配方
+        if (itemData.recipes && itemData.recipes.some(recipe =>
+          recipe.some(component =>
+            component.itemName.toLowerCase().includes(lowerSearchTerm)
+          )
+        )) return true;
+
+        // 搜索宝箱效果
+        // if (itemData.lootBoxes && itemData.lootBoxes.some(lootBox =>
+        //   lootBox.some(component =>
+        //     component.itemName.toLowerCase().includes(lowerSearchTerm)
+        //   )
+        // )) return true;
+
+        return false;
+      });
+    }
+
+
 
     // 类别筛选
     if (filterCategory !== '全部') {
@@ -140,7 +187,25 @@ const Plant = ({
     });
 
     return result;
-  }, [items, sortField, sortDirection, filterCategory,filterParallelWorld]);
+  }, [items, sortField, sortDirection, filterCategory,filterParallelWorld,searchTerm]);
+
+  // 添加判断是否为移动端的函数
+  const isMobile = () => {
+    return window.innerWidth <= 768;
+  };
+
+  // 添加清除搜索函数
+  const clearSearch = () => {
+    setSearchTerm('');
+  };
+
+  // 添加 ESC 键处理函数
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      clearSearch();
+      e.target.blur();
+    }
+  };
 
   // 修改检查材料函数，接受具体的配方而不是整个配方数组
   const checkPlayerHasMaterials = (recipe) => {
@@ -198,8 +263,8 @@ const Plant = ({
   };
 
   // 渲染道具图标
-  const renderItemIcon = (item, name) => {
-    if (item.icon) {
+  const renderItemIcon = (item, name,size = 24) => {
+    if (item.icon && item.icon.trim() !== '-') {
       if (item.icon.startsWith('http') || item.icon.startsWith('data:image')) {
         // 处理图片URL
         return (
@@ -207,8 +272,8 @@ const Plant = ({
             src={item.icon}
             alt={name}
             style={{
-              width: '100%',
-              height: '100%',
+              width: `${size}px`,
+              height: `${size}px`,
               objectFit: 'contain'
             }}
           />
@@ -218,13 +283,13 @@ const Plant = ({
         return (
           <div
             className="icon-placeholder"
-            title={item.icon}
+            // title={item.icon+ name+ ": "+item.description}
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '100%',
-              height: '100%',
+              width: `${size}px`,
+              height: `${size}px`,
               backgroundColor: '#f0f0f0',
               borderRadius: '50%',
               fontWeight: 'bold',
@@ -232,15 +297,27 @@ const Plant = ({
               fontSize: '24px'
             }}
           >
-            {name.charAt(0).toUpperCase()}
+            {item.icon}
           </div>
         );
       }
     } else {
       // 没有图标时显示首字母
       return (
-        <div className="item-icon-placeholder">
-          {name.charAt(0)}
+        <div className="item-icon-placeholder"
+             style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: `${size}px`,
+            height: `${size}px`,
+            backgroundColor: '#f0f0f0',
+            borderRadius: '4px',
+            fontWeight: 'bold',
+            color: '#666',
+            fontSize: `${size * 0.4}px`
+          }}>
+          {name?.charAt(0).toUpperCase()}
         </div>
       );
     }
@@ -264,57 +341,151 @@ const Plant = ({
     return maxCount === Infinity ? 0 : maxCount;
   };
 
+  const renderFiltersAndSort = () => (
+    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+      <div className="filter-control">
+        <select
+          value={filterCategory}
+          title="筛选类别"
+          onChange={(e) => setFilterCategory(e.target.value)}
+        >
+          {allCategories.map(category => (
+            <option key={category} value={category}>{category}</option>
+          ))}
+        </select>
+        <select
+          value={filterParallelWorld}
+          title="筛选游戏世界"
+          onChange={(e) => setFilterParallelWorld(e.target.value)}
+        >
+          {allParallelWorlds.map(world => (
+            <option key={world} value={world}>{world}</option>
+          ))}
+        </select>
+      </div>
+      <div className="sort-control">
+        <select
+          value={sortField}
+          title="排序字段"
+          onChange={(e) => handleSort(e.target.value)}
+        >
+          <option value="name">名称</option>
+          <option value="category">类别</option>
+        </select>
+        {/* 添加正逆序切换按钮 */}
+        <button
+          onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+          className="sort-toggle-btn"
+          style={{padding: '0px 1px'}}
+          title={`当前为${sortDirection === 'asc' ? '正序' : '逆序'}，点击切换`}
+        >
+          {sortDirection === 'asc' ? '↑ ' : '↓ '}
+        </button>
+      </div>
+    </div>
+  );
+
+  const toggleRecipeItemVisibility = (itemName, recipeIndex, itemIndex) => {
+    const key = `${itemName}-${recipeIndex}-${itemIndex}`;
+    setVisibleRecipeItems(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
 
   return (
     <div className="plant-tab">
       {/* 筛选和排序控件 */}
       <div className="plant-controls" style={{ display: hideTopControls ? 'none' : 'flex' , flexDirection: 'row', justifyContent: 'space-between'}}>
         <div style={{ display: 'flex', flexDirection: 'row'}}>
-          <div className="filter-control">
-            <select
-              value={filterCategory}
-              title="筛选类别"
-              onChange={(e) => setFilterCategory(e.target.value)}
-            >
-              {allCategories.map(category => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-            <select
-              value={filterParallelWorld}
-              title="筛选游戏世界"
-              onChange={(e) => setFilterParallelWorld(e.target.value)}
-            >
-              {allParallelWorlds.map(world => (
-                <option key={world} value={world}>{world}</option>
-              ))}
-            </select>
+          <div className="search-control" style={{ position: 'relative', display: 'inline-block', marginRight: '10px' }}>
+            <input
+              type="text"
+              placeholder="搜索道具名称、描述、配方..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
+              style={{
+                padding: '5px 25px 5px 5px',
+                borderRadius: '4px',
+                border: '1px solid #ccc',
+                width: isMobile() ? '120px' : '200px',
+              }}
+            />
+            {searchTerm && (
+              <button
+                onClick={clearSearch}
+                style={{
+                  position: 'absolute',
+                  right: '5px',
+                  top: '35%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  padding: '0',
+                  width: '16px',
+                  height: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#999',
+                }}
+                title="清除搜索"
+              >
+                ×
+              </button>
+            )}
           </div>
-          <div className="sort-control">
-            <select
-              value={sortField}
-              title="排序字段"
-              onChange={(e) => handleSort(e.target.value)}
-            >
-              <option value="name">名称</option>
-              <option value="category">类别</option>
-            </select>
-            {/* 添加正逆序切换按钮 */}
-            <button
-              onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-              className="sort-toggle-btn"
-              title={`当前为${sortDirection === 'asc' ? '正序' : '逆序'}，点击切换`}
-            >
-              {sortDirection === 'asc' ? '↑ ' : '↓ '}
-            </button>
 
-          </div>
+          {isMobile() ? (
+            <>
+              <button
+                ref={filterButtonRef}
+                onClick={() => setShowFilters(!showFilters)}
+                style={{
+                  color: 'black',
+                  background: 'none',
+                  borderRadius: '4px',
+                  padding: '5px 10px',
+                  cursor: 'pointer',
+                  marginRight: '10px'
+                }}
+                title="筛选和排序"
+              >
+                ☰
+              </button>
+              {showFilters && (
+                <div
+                  className="filters-sort-popup"
+                  style={{
+                    position: 'absolute',
+                    top: filterButtonRef.current ?
+                      filterButtonRef.current.offsetTop + filterButtonRef.current.offsetHeight : '50px',
+                    left: '30px',
+                    background: 'white',
+                    padding: '1px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    zIndex: 100,
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  {renderFiltersAndSort()}
+                </div>
+              )}
+            </>
+          ) : (
+            renderFiltersAndSort()
+          )}
         </div>
         <div className="other-control">
           <button onClick={onCraftItem} title="刷新">⟳</button>
         </div>
-
-
       </div>
 
       {/* 网格模式显示道具 */}
@@ -330,7 +501,7 @@ const Plant = ({
               title={itemData.description || '暂无描述'}
             >
               <div className="item-icon">
-                {renderItemIcon(itemData, itemName)}
+                {renderItemIcon(itemData, itemName,64)}
               </div>
               <div className="item-name">{itemName}</div>
               <div className="item-category">{itemData.category || '其它类'}</div>
@@ -345,9 +516,25 @@ const Plant = ({
                 <div className="recipe-group">
                   <div className="recipe-items">
                     {recipe.map((item, itemIndex) => (
-                      <span key={itemIndex} className="recipe-item-tag">
-                        {item.itemName}×{item.count}
+                      <span
+                        key={itemIndex}
+                        className="recipe-item-tag"
+                        title={item.itemName+'×'+item.count}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // 使用当前项的数据而不是 selectedItem
+                          toggleRecipeItemVisibility(itemName, recipeIndex, itemIndex);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {renderItemIcon(items[item.itemName],item.itemName)}
+                        {visibleRecipeItems[`${itemName}-${recipeIndex}-${itemIndex}`]
+                          ? `${item.itemName}×${item.count}`
+                          : `×${item.count}`}
                       </span>
+                      // <span key={itemIndex} className="recipe-item-tag" title={item.itemName+'×'+item.count}>
+                      //   {renderItemIcon(items[item.itemName])}×{item.count}
+                      // </span>
                     ))}
                   </div>
                 </div>
@@ -361,9 +548,9 @@ const Plant = ({
 
       {selectedItem && (
         <div className="craft-modal">
-          <h4>合成 {selectedItem.itemName}</h4>
-          <p>道具名称: {selectedItem.itemName}</p>
-          <p>配方编号: {selectedItem.recipeIndex + 1}</p>
+          <h4>合成【{selectedItem.itemName}】 #{selectedItem.recipeIndex + 1}</h4>
+          {/*<p>道具名称: {selectedItem.itemName}</p>*/}
+          {/*<p>配方编号: {selectedItem.recipeIndex + 1}</p>*/}
 
           <div className="recipe-details">
             <h5>所需材料:</h5>
@@ -376,10 +563,10 @@ const Plant = ({
 
                   return (
                     <div key={itemIndex} className="recipe-item-with-inventory">
-                      <span className="recipe-item-tag">
-                        {item.itemName}×{requiredCount}
+                      <span className="recipe-item-tag" >
+                        {renderItemIcon(items[item.itemName],item.itemName)}{item.itemName}×{requiredCount}
                       </span>
-                      <span className={`inventory-count ${isSufficient ? 'sufficient' : 'insufficient'}`}>
+                      <span className={`inventory-count ${isSufficient ? 'sufficient' : 'insufficient'}`} style={{fontSize: '10px'}}>
                         (拥有: {ownedCount})
                       </span>
                     </div>
@@ -399,7 +586,7 @@ const Plant = ({
 
 
           <div className="craft-quantity">
-            <label>合成数量:</label>
+            <h5>合成数量:</h5>
             <div className="quantity-controls">
               <button
                 onClick={() => setCraftCount(Math.max(1, craftCount - 1))}

@@ -2,64 +2,85 @@
 import React, { useState, useEffect, useRef } from 'react';
 import CONFIG from '../config';
 import SettingsModal from "./SettingsModal";
+import UserMenu from './UserMenu';
+
 
 const CharacterTab = ({
   stats,
   credits,
   settings,
+  defaultSettings,
   properties,
-  conversionRates,
+  // conversionRates,
   onUpdateCredits,
   onShowStatus,
   creditTypes,
-  characterSettings,
+  // characterSettings,
   sellRates,
-  expFormulas,
+  // expFormulas,
   levelToRealm,
   propertyToRealm,
-  hideTopControls
+  hideTopControls,
+  currentUser,
+  onLogout
 }) => {
   const [editingCredit, setEditingCredit] = useState(null);
   const [editValues, setEditValues] = useState({ modify: '', add: '0' });
   const modalRef = useRef(null); // 用于处理ESC键退出
   const [sellingCredit, setSellingCredit] = useState(null);
   const [sellAmount, setSellAmount] = useState('0');
-  const [editingCharacter, setEditingCharacter] = useState(false);
+  // const [editingCharacter, setEditingCharacter] = useState(false);
   const [characterInfo, setCharacterInfo] = useState({
-    name: stats.name || '冒险者',
-    avatar: stats.avatar || '🧙‍♂️'
+    name: stats?.name || '冒险者',
+    avatar: stats?.avatar || '🧙‍♂️'
   });
   const [showRealmModal, setShowRealmModal] = useState(false);
   const [realmModalData, setRealmModalData] = useState({ title: '', name: '', description: '' });
 
-  // 在组件顶部添加预设emoji列表
-  const PRESET_EMOJIS = [
-    '🧙‍♂️', '🧙‍♀️', '👨‍💻', '👩‍💻', '👨‍🎨', '👩‍🎨', '👨‍🔬', '👩‍🔬',
-    '👨‍🚀', '👩‍🚀', '🦸‍♂️', '🦸‍♀️', '🦹‍♂️', '🦹‍♀️', '👨‍⚕️', '👩‍⚕️',
-    '👨‍🎓', '👩‍🎓', '👨‍🏫', '👩‍🏫', '👨‍🌾', '👩‍🌾', '👨‍🍳', '👩‍🍳',
-    '👨‍🔧', '👩‍🔧', '👨‍🏭', '👩‍🏭', '👨‍💼', '👩‍💼', '👨‍🔬', '👩‍🔬',
-    '👨‍🎤', '👩‍🎤', '👨‍🎨', '👩‍🎨', '👨‍✈️', '👩‍✈️', '👨‍🚀', '👩‍🚀'
-  ];
+  const expFormulas = (settings?.expFormulas && Object.keys(settings.expFormulas).length > 0)
+    ? settings.expFormulas
+    : ((defaultSettings?.expFormulas && Object.keys(defaultSettings.expFormulas).length > 0)
+       ? defaultSettings.expFormulas
+       : {
+           levelUpA: 100,
+           levelUpN: 2.5,
+           propertyLevelA: 50,
+           propertyLevelN: 2.0
+         });
+
+  const characterSettings = (settings?.characterSettings && settings.characterSettings.length > 0)
+    ? settings.characterSettings
+    : ((defaultSettings?.characterSettings && defaultSettings.characterSettings.length > 0)
+       ? defaultSettings.characterSettings
+       : []);
+
+
 
   // 添加图标选择面板状态
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   // 修改点击emoji处理函数
-  const handleEmojiSelect = (emoji) => {
-    setCharacterInfo({...characterInfo, avatar: emoji});
-    setShowEmojiPicker(false);
-  };
+  // const handleEmojiSelect = (emoji) => {
+  //   setCharacterInfo({...characterInfo, avatar: emoji});
+  //   setShowEmojiPicker(false);
+  // };
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout(null);
+    }
+  };
 
   // 计算等级和经验
   const calculateLevelAndExp = () => {
-    const exp = stats.exp || 0;
+    const exp = stats?.exp || 0;
 
     // 获取公式参数 a 和 n，默认值为 100 和 2.5
     const a = expFormulas?.levelUpA || 100;
     const n = expFormulas?.levelUpN || 2.5;
 
     // 使用更平滑的等级计算公式
-    const level = Math.floor(Math.pow(exp / a, 1/n)) + 1;
+    const level = Math.floor(Math.pow(exp / a, 1/n)) + 1 || 1;
     const nextLevelExp = Math.pow(level, n) * a;
     const currentLevelExp = Math.pow(level - 1, n) * a;
     const expInCurrentLevel = exp - currentLevelExp;
@@ -83,10 +104,10 @@ const CharacterTab = ({
     const n = expFormulas?.propertyLevelN;
 
     // 使用公式计算属性等级
-    const level = Math.floor(Math.pow(propertyValue / a, 1/n)) + 1;
+    const level = Math.floor(Math.pow(propertyValue / a, 1/n)) + 1 || 1;
     const nextLevelValue = Math.pow(level, n) * a;
     const currentLevelValue = Math.pow(level - 1, n) * a;
-    const valueInCurrentLevel = propertyValue - currentLevelValue;
+    const valueInCurrentLevel = propertyValue - currentLevelValue || 0;
     const valueNeeded = nextLevelValue - propertyValue;
     const valueNeededNextLevel = nextLevelValue - currentLevelValue;
 
@@ -122,7 +143,7 @@ const CharacterTab = ({
     if (!propertyToRealm || propertyToRealm.length === 0) return null;
 
     // 查找属性类别
-    const propertyInfo = getPropertyCategoryInfo(propertyType);
+    const propertyInfo = getPropertyByCreditType(propertyType);
 
     if (!propertyInfo) return null;
 
@@ -143,37 +164,26 @@ const CharacterTab = ({
 
 
 
-  // 获取属性类别映射信息
-  const getPropertyCategoryInfo = (creditType) => {
-    if (characterSettings && characterSettings.characterSettings) {
+
+
+  const getPropertyByCreditType = (creditType) => {
+    if (characterSettings) {
       // 查找匹配的设置项
-      const setting = characterSettings.characterSettings.find(
+      const setting = characterSettings.find(
         item => item.creditType === creditType
       );
+      // console.log("getPropertybyCreditType: setting",setting)
 
-      if (setting && setting.propertyCategory) {
-        return {
-          name: setting.propertyCategory,
-          icon: setting.icon || "🌟",
-          color: setting.color || "#666666",
-          domain: setting.domain,
-        };
-      }
-    }
+      return {
+        creditType: creditType,
+        propertyCategory: setting.propertyCategory || "活力",
+        icon: setting.icon || "⚡",
+        color: setting.color || "#fbbc05",
+        domain: setting.domain || "生活",
+        creditIcon: setting.creditIcon || "🐚",
+      };
+    };
     return null;
-  };
-  // 获取积分类型对应的图标
-  const getCreditIcon = (creditType) => {
-    if (characterSettings && characterSettings.characterSettings) {
-      // 查找匹配的设置项
-      const setting = characterSettings.characterSettings.find(
-        item => item.creditType === creditType
-      );
-
-      // 返回积分图标，如果没有设置则返回默认图标
-      return setting?.creditIcon || "💎";
-    }
-    return "💎";
   };
 
   // 处理ESC键退出编辑弹窗
@@ -189,13 +199,13 @@ const CharacterTab = ({
         if (editingCredit) {
           setEditingCredit(null);
         }
-        if (editingCharacter) {
-          setEditingCharacter(false);
-        }
+        // if (editingCharacter) {
+        //   setEditingCharacter(false);
+        // }
       }
     };
 
-    if (showEmojiPicker || editingCredit || editingCharacter) {
+    if (showEmojiPicker || editingCredit) {
       document.addEventListener('keydown', handleEscKey);
       document.body.style.overflow = 'hidden';      // 防止背景滚动
     }
@@ -204,7 +214,7 @@ const CharacterTab = ({
       document.removeEventListener('keydown', handleEscKey);
       document.body.style.overflow = 'unset';
     };
-  }, [showEmojiPicker, editingCredit,editingCharacter]);
+  }, [showEmojiPicker, editingCredit]);
 
   // 点击模态框外部关闭
   useEffect(() => {
@@ -227,20 +237,20 @@ const CharacterTab = ({
         if (sellingCredit) {
           setSellingCredit(null);
         }
-        if (editingCharacter) {
-          setEditingCharacter(false);
-        }
+        // if (editingCharacter) {
+        //   setEditingCharacter(false);
+        // }
       }
     };
 
-    if (editingCredit || sellingCredit || editingCharacter || showEmojiPicker) {
+    if (editingCredit || sellingCredit  || showEmojiPicker) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [editingCredit, sellingCredit, editingCharacter, showEmojiPicker]);
+  }, [editingCredit, sellingCredit, showEmojiPicker]);
 
   useEffect(() => {
     const handleEscKey = (event) => {
@@ -252,9 +262,7 @@ const CharacterTab = ({
         if (sellingCredit) {
           setSellingCredit(null);
         }
-        if (editingCharacter) {
-          setEditingCharacter(false);
-        }
+
       }
     };
 
@@ -300,20 +308,28 @@ const CharacterTab = ({
           <div className="character-header">
             <div
               className="character-avatar"
-              onClick={() => {
-                setCharacterInfo({
-                  name: stats.name || '冒险者',
-                  avatar: stats.avatar || '🧙‍♂️'
-                });
-                setEditingCharacter(true);
-              }}
+              // onClick={() => {
+              //   setCharacterInfo({
+              //     name: stats.name || '冒险者',
+              //     avatar: stats.avatar || '🧙‍♂️'
+              //   });
+              //   // setEditingCharacter(true);
+              // }}
               style={{ cursor: 'pointer' }}
             >
-              <span className="avatar-icon">{stats.avatar || '🧙‍♂️'}</span>
+              <UserMenu
+                currentUser={currentUser}
+                onLogout={handleLogout}
+                position="bottom-left"
+                trigger={<span className="avatar-icon">{stats?.avatar || '🧙‍♂️'}</span>} // 修正 avtar 为 avatar
+                stats={stats}
+                onUpdate={onUpdateCredits}
+                onShowStatus={onShowStatus}
+              />
             </div>
             <div className="character-info">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <h2>{stats.name || '冒险者'}</h2>
+              <div style={{ display: 'flex',  gap: '10px' }}>
+                <h2>{stats?.name || '冒险者'}</h2>
                 <button
                   onClick={onUpdateCredits}
                   style={{
@@ -365,7 +381,7 @@ const CharacterTab = ({
                       // 查找所有等级境界数据
                       if (levelToRealm && levelToRealm.length > 0) {
                         setRealmModalData({
-                          title: '经验境界预览',
+                          title: '经验境界一览表',
                           isList: true,
                           realms: levelToRealm
                         });
@@ -387,33 +403,39 @@ const CharacterTab = ({
               })()}
             </div>
           </div>
-          <div className="character-settings-modal">
-            <button className="tasksys-settings-button" onClick={() => setIsSettingsModalOpen(!isSettingsModalOpen)}>
-              ⚙️️
-            </button>
-            <SettingsModal
-              isOpen={isSettingsModalOpen}
-              title="面板设置"
-              onClose={() => setIsSettingsModalOpen(false)}
-              targetGroup={['general','character', 'formulas', 'realms', 'credit-sales',   ]}
-              settings={settings}
-              onUpdateSettings={onUpdateCredits}
-            />
+          <div className="character-righttop">
+            <div className="character-settings-modal">
+                <button className="tasksys-settings-button" onClick={() => setIsSettingsModalOpen(!isSettingsModalOpen)}>
+                  ⚙️️
+                </button>
+                <SettingsModal
+                  isOpen={isSettingsModalOpen}
+                  title="面板设置"
+                  onClose={() => setIsSettingsModalOpen(false)}
+                  targetGroup={['general','character', 'formulas', 'realms', 'credit-sales',   ]}
+                  settings={settings}
+                  defaultSettings={defaultSettings}
+                  stats={stats}
+                  onUpdateSettings={onUpdateCredits}
+                />
+              </div>
+
           </div>
+
         </div>
 
         {/* 显示角色属性 */}
         <div className="attributes-grid">
-          {creditTypes.map(type => {
+          {creditTypes.slice(0,-2).map(type => {
             // 获取属性类别信息
-            const propertyInfo = getPropertyCategoryInfo(type);
+            const propertyInfo = getPropertyByCreditType(type);
 
             // 如果没有找到属性类别映射，则不显示在角色属性区域
             if (!propertyInfo) return null;
 
             let propertyValue = 0;
             if (properties) {
-              propertyValue = properties[propertyInfo.name] || 0;
+              propertyValue = properties[propertyInfo.propertyCategory] || 0;
             }
 
             // 计算属性等级
@@ -438,7 +460,7 @@ const CharacterTab = ({
                       margin: '0',
                       fontSize: '16px'
                     }}>
-                      {propertyInfo.name}
+                      {propertyInfo.propertyCategory}
                     </h3>
                     <br></br>
                     <p className="attribute-value" style={{
@@ -469,7 +491,7 @@ const CharacterTab = ({
                       <p style={{fontSize: '12px', color: '#333'}}>{propertyInfo.domain}</p>
                       {(() => {
                         const propertyRealm = getPropertyRealm(propertyLevel, type);
-                        const propertyInfo = getPropertyCategoryInfo(type);
+                        const propertyInfo = getPropertyByCreditType(type);
 
                         return propertyRealm ? (
                           <span
@@ -493,7 +515,7 @@ const CharacterTab = ({
 
                               if (propertyRealms.length > 0) {
                                 setRealmModalData({
-                                  title: `属性境界预览 - ${propertyInfo.name}`,
+                                  title: `${propertyInfo.propertyCategory}属性境界一览表`,
                                   isList: true,  // 修复：应该设置为 true 来显示列表
                                   realms: propertyRealms
                                 });
@@ -547,7 +569,9 @@ const CharacterTab = ({
             <div className="credits-grid">
               {resourceTypes.map(type => {
                 const value = credits[type] !== undefined ? credits[type] : 0;
-                const icon = getCreditIcon(type); // 获取积分图标
+                const propertyInfo = getPropertyByCreditType(type);
+                const icon = propertyInfo?.creditIcon; // 获取积分图标
+
                 return (
                   <div
                     key={type}
@@ -556,6 +580,7 @@ const CharacterTab = ({
                       setSellingCredit(type);
                       setSellAmount('0');
                     }}
+                    title={`${propertyInfo.domain} | ${propertyInfo.propertyCategory}${propertyInfo.icon} | ${propertyInfo.creditType}${propertyInfo.creditIcon}`}
                     style={{
                       display: 'flex',
                       flexDirection: 'column',
@@ -563,10 +588,10 @@ const CharacterTab = ({
                       justifyContent: 'center',
                       padding: '15px 10px',
                       position: 'relative',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
                     }}>
                     {/* 使用新的编辑图标 */}
-                    {characterSettings?.allowManualCreditEditing !== false && (
+                    {settings?.allowManualCreditEditing !== false && (
                       <button
                         className="edit-button-top-right"
                         onClick={() => {
@@ -641,7 +666,8 @@ const CharacterTab = ({
             <div className="credits-grid">
               {walletTypes.map(type => {
                 const value = credits[type] !== undefined ? credits[type] : 0;
-                const icon = getCreditIcon(type); // 获取积分图标
+                const icon = getPropertyByCreditType(type)?.creditIcon; // 获取积分图标
+
                 return (
                   <div key={type} className="credit-card" style={{
                     display: 'flex',
@@ -652,7 +678,7 @@ const CharacterTab = ({
                     position: 'relative',
                   }}>
                     {/* 使用新的编辑图标 */}
-                    {characterSettings?.allowManualCreditEditing !== false && (
+                    {settings?.allowManualCreditEditing !== false && (
                       <button
                         className="edit-button-top-right"
                         onClick={() => {
@@ -771,8 +797,8 @@ const CharacterTab = ({
     }
   };
 
-  const resourceTypes = creditTypes.slice(0, -2);
-  const walletTypes = creditTypes.slice(-2);
+  const resourceTypes = creditTypes?.slice(0, -2);
+  const walletTypes = creditTypes?.slice(-2);
 
   // 在组件的函数区域添加弹窗渲染函数
   const RealmModal = () => {
@@ -874,11 +900,16 @@ const CharacterTab = ({
 
       <RealmModal />
 
-      {sellingCredit && (
+      {sellingCredit && (() => {
+        const propertyInfo = getPropertyByCreditType(sellingCredit);
+        return (
         <div className="edit-credit-modal-overlay">
           <div className="edit-credit-modal" ref={modalRef}>
             <div className="modal-header" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <h4>卖出{sellingCredit}资源</h4>
+              <div>
+                <h3 style={{fontSize: '18px'}}><strong>卖出{sellingCredit}资源</strong></h3>
+                <label title="映射关系：任务领域 | 角色属性 | 资源积分" style={{ fontSize: '10px', color: '#888' }}>{`(${propertyInfo?.domain} | ${propertyInfo?.propertyCategory}${propertyInfo?.icon} | ${propertyInfo?.creditType}${propertyInfo?.creditIcon})`}</label>
+              </div>
               <button
                 className="modal-close-button"
                 onClick={() => setSellingCredit(null)}
@@ -904,10 +935,10 @@ const CharacterTab = ({
                 />
               </button>
             </div>
-            <p>当前{sellingCredit}资源：{credits[sellingCredit]}</p>
+
+            <p style={{marginTop:'40px',marginBottom:'30px', textAlign: 'center'}}>{sellingCredit}{propertyInfo?.creditIcon}数目：{credits[sellingCredit]}</p>
 
             <div className="credit-sell-controls" style={{ margin: '20px 0' }}>
-              <label style={{ display: 'block', marginBottom: '8px' }}>卖出数量：</label>
               <div style={{
                 display: 'flex',
                 justifyContent: 'center',
@@ -1066,128 +1097,9 @@ const CharacterTab = ({
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
-      {editingCharacter && (
-        <div className="edit-credit-modal-overlay">
-          <div className="edit-credit-modal" ref={modalRef}>
-            <h4>编辑角色信息</h4>
-
-            <div>
-              <label>角色名称：</label>
-              <input
-                type="text"
-                value={characterInfo.name}
-                onChange={(e) => setCharacterInfo({...characterInfo, name: e.target.value})}
-                style={{
-                  width: '100%',
-                  height: '32px', // 统一高度
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
-
-            <div>
-              <label>角色图标：</label>
-              <div style={{
-                alignItems: 'center',
-                gap: '10px',
-              }}>
-                <input
-                  type="text"
-                  value={characterInfo.avatar}
-                  onChange={(e) => setCharacterInfo({...characterInfo, avatar: e.target.value})}
-                  onClick={() => setShowEmojiPicker(true)} // 添加点击事件直接打开emoji面板
-                  style={{
-                    flex: 1,
-                    width: '100%',
-                    height: '32px', // 统一高度
-                    boxSizing: 'border-box',
-                    cursor: 'pointer'
-                  }}
-                />
-
-              </div>
-
-              <div className="character-icon-preview">
-                预览: <span className="avatar-icon">{characterInfo.avatar}</span>
-              </div>
-
-              {/* 预设图标选择面板 */}
-              {showEmojiPicker && (
-                <div
-                  className="emoji-picker-panel" // 添加类名
-                  style={{
-                    position: 'absolute',
-                    top: '180px',
-                    left: '150px',
-                    backgroundColor: 'white',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    padding: '10px',
-                    zIndex: 1002, // 提高层级确保在模态框之上
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-                    maxWidth: '300px'
-                  }}
-                  // 添加点击事件阻止冒泡，避免触发模态框关闭
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(8, 1fr)',
-                    gap: '5px'
-                  }}>
-                    {PRESET_EMOJIS.map((emoji, index) => (
-                      <div
-                        key={index}
-                        onClick={() => handleEmojiSelect(emoji)}
-                        style={{
-                          fontSize: '20px',
-                          cursor: 'pointer',
-                          padding: '5px',
-                          textAlign: 'center',
-                          borderRadius: '4px'
-                        }}
-                        onMouseOver={(e) => e.target.style.backgroundColor = '#f0f0f0'}
-                        onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
-                      >
-                        {emoji}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="modal-buttons">
-              <button onClick={async () => {
-                try {
-                  // 保存角色信息到服务器
-                  const response = await fetch(`${CONFIG.API_BASE_URL}/api/character/info`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(characterInfo)
-                  });
-
-                  if (response.ok) {
-                    onShowStatus('角色信息已更新');
-                    onUpdateCredits(); // 刷新数据
-                    setEditingCharacter(false);
-                  } else {
-                    alert('更新角色信息失败');
-                  }
-                } catch (error) {
-                  console.error('保存角色信息时发生错误:', error);
-                  alert('网络错误: ' + error.message);
-                }
-              }}>
-                确认
-              </button>
-              <button onClick={() => setEditingCharacter(false)}>取消</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 积分编辑模态框 */}
       {editingCredit && (
@@ -1267,37 +1179,6 @@ const CharacterTab = ({
               }}>
                 确认
               </button>
-              {/*<button onClick={async () => {*/}
-              {/*  try {*/}
-              {/*    // 对积分类型名称进行URL编码*/}
-              {/*    const encodedCreditType = encodeURIComponent(editingCredit);*/}
-
-              {/*    // 保存积分数据*/}
-              {/*    const response = await fetch(`${CONFIG.API_BASE_URL}/api/credits/${encodedCreditType}`, {*/}
-              {/*      method: 'PUT',*/}
-              {/*      headers: { 'Content-Type': 'application/json' },*/}
-              {/*      body: JSON.stringify({*/}
-              {/*        amount: parseFloat(editValues.modify),*/}
-              {/*        add: parseFloat(editValues.add)*/}
-              {/*      })*/}
-              {/*    });*/}
-
-              {/*    const result = await response.json();*/}
-
-              {/*    if (response.ok) {*/}
-              {/*      onShowStatus(result.message);*/}
-              {/*      onUpdateCredits();*/}
-              {/*      setEditingCredit(null);*/}
-              {/*    } else {*/}
-              {/*      alert(result.error);*/}
-              {/*    }*/}
-              {/*  } catch (error) {*/}
-              {/*    console.error('保存积分时发生错误:', error);*/}
-              {/*    alert('网络错误: ' + error.message);*/}
-              {/*  }*/}
-              {/*}}>*/}
-              {/*  确认*/}
-              {/*</button>*/}
               <button onClick={() => setEditingCredit(null)}>取消</button>
             </div>
           </div>

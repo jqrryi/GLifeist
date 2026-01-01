@@ -918,6 +918,15 @@
 }
 
 
+.image-title.clickable {
+  cursor: pointer;
+  color: #007bff;
+  text-decoration: underline;
+}
+
+.image-title.clickable:hover {
+  color: #0056b3;
+}
 
 
 

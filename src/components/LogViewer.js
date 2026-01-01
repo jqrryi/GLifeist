@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useLogs } from '../contexts/LogContext';
 import './LogViewer.css';
+import userDataManager from "../utils/userDataManager";
 
 const isMobileDevice = () => {
   return window.innerWidth <= 768;
@@ -15,12 +16,13 @@ const LogViewer = (hideTopControls) => {
   const components = [...new Set(logs.map(log => log.component))];
   const [currentPage, setCurrentPage] = useState(1); // 当前页码
   const [logsPerPage, setLogsPerPage] = useState(() => {
-    const savedLogsPerPage = localStorage.getItem('logsPerPage');
+    // const savedLogsPerPage = localStorage.getItem('logsPerPage');
+    const savedLogsPerPage = userDataManager.getUserData('logsPerPage');
+
     return savedLogsPerPage ? parseInt(savedLogsPerPage, 10) : 10;
   });  // 每页日志数
   const [inputPage, setInputPage] = useState(currentPage); // 用于页码输入框的状态
   const [expandedLogs, setExpandedLogs] = useState(new Set());
-
   // 过滤日志
   const filteredLogs = logs.filter(log => {
     const matchesFilter = log.action.toLowerCase().includes(filter.toLowerCase()) ||
@@ -90,7 +92,6 @@ const LogViewer = (hideTopControls) => {
     });
   };
 
-  console.log('LogsTab hide: ', hideTopControls.hideTopControls)
 
   return (
     <div className="log-viewer">
@@ -248,7 +249,8 @@ const LogViewer = (hideTopControls) => {
             onChange={(e) => {
               const newLogsPerPage = Number(e.target.value);
               setLogsPerPage(newLogsPerPage);
-              localStorage.setItem('logsPerPage', newLogsPerPage.toString());
+              // localStorage.setItem('logsPerPage', newLogsPerPage.toString());
+              userDataManager.setUserData('logsPerPage', newLogsPerPage.toString());
               setCurrentPage(1); // 重置到第一页
               setInputPage(1); // 同步更新输入框的值
             }}

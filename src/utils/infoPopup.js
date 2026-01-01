@@ -110,7 +110,7 @@ export const showInfoPopup = (title, content, event) => {
 
 export const InfoTipButton = ({ title, content, children, style = {} }) => {
   const defaultStyle = {
-    padding: '5px 10px',
+    // padding: '5px 10px',
     background: 'transparent',
     color: 'black',
     border: 'none',

@@ -1,5 +1,5 @@
 // src/components/BackpackTab.js
-import React, { useState, useEffect, useMemo } from 'react'; // 添加 useMemo 引入
+import React, {useState, useEffect, useMemo, useRef} from 'react'; // 添加 useMemo 引入
 import CONFIG from '../config';
 import {useLogs} from "../contexts/LogContext";
 
@@ -14,6 +14,9 @@ const BackpackTab = ({ backpack, items, onUseItem, onShowStatus, hideTopControls
   const [currentPage, setCurrentPage] = useState(1); // 当前页码
   const [logsPerPage, setLogsPerPage] = useState(10); // 每页日志数
   const [inputPage, setInputPage] = useState(currentPage); // 用于页码输入框的状态
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   //使用日志
   const { logs, addLog } = useLogs();
@@ -21,6 +24,7 @@ const BackpackTab = ({ backpack, items, onUseItem, onShowStatus, hideTopControls
     const matchesComponent = log.component === '背包';
     return matchesComponent;
   });
+  const filterButtonRef = useRef(null);
 
   const indexOfLastLog = currentPage * logsPerPage;
   const indexOfFirstLog = indexOfLastLog - logsPerPage;
@@ -36,7 +40,23 @@ const BackpackTab = ({ backpack, items, onUseItem, onShowStatus, hideTopControls
     setInputPage(pageNumber); // 同步更新输入框的值
   };
 
+  // 添加判断是否为移动端的函数
+  const isMobile = () => {
+    return window.innerWidth <= 768;
+  };
 
+  // 添加清除搜索函数
+  const clearSearch = () => {
+    setSearchTerm('');
+  };
+
+  // 添加 ESC 键处理函数
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      clearSearch();
+      e.target.blur();
+    }
+  };
   // 获取所有类别
   const allCategories = useMemo(() => {
     const cats = new Set(['全部', ...categories]);
@@ -62,6 +82,36 @@ const BackpackTab = ({ backpack, items, onUseItem, onShowStatus, hideTopControls
   const filteredAndSortedItems = useMemo(() => {
     let result = Object.entries(backpack).filter(([name, count]) => count > 0);
 
+    // 搜索过滤
+    if (searchTerm) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      result = result.filter(([name]) => {
+        const item = items[name];
+        if (!item) return false;
+
+        // 搜索道具名称
+        if (name.toLowerCase().includes(lowerSearchTerm)) return true;
+
+        // 搜索道具描述
+        if (item.description && item.description.toLowerCase().includes(lowerSearchTerm)) return true;
+
+        // // 搜索合成配方
+        // if (item.recipes && item.recipes.some(recipe =>
+        //   recipe.some(component =>
+        //     component.itemName.toLowerCase().includes(lowerSearchTerm)
+        //   )
+        // )) return true;
+        //
+        // // 搜索宝箱效果
+        // if (item.lootBoxes && item.lootBoxes.some(lootBox =>
+        //   lootBox.some(component =>
+        //     component.itemName.toLowerCase().includes(lowerSearchTerm)
+        //   )
+        // )) return true;
+
+        return false;
+      });
+    }
     // 类别筛选
     if (filterCategory !== '全部') {
       result = result.filter(([name]) => {
@@ -117,7 +167,7 @@ const BackpackTab = ({ backpack, items, onUseItem, onShowStatus, hideTopControls
     });
 
     return result;
-  }, [backpack, items, filterCategory, filterParallelWorld, sortField, sortDirection]);
+  }, [backpack, items, filterCategory, filterParallelWorld, sortField, sortDirection, searchTerm]);
 
   // 添加ESC键退出使用弹窗的功能
   useEffect(() => {
@@ -126,24 +176,38 @@ const BackpackTab = ({ backpack, items, onUseItem, onShowStatus, hideTopControls
       if (e.key === 'Escape' && selectedItem) {
         // 关闭使用弹窗
         setSelectedItem(null);
+        return;
       }
 
       // ESC键也可以关闭日志界面
       if (e.key === 'Escape' && showLogs) {
         setShowLogs(false);
+        return;
+      }
+
+      // 检查是否按下了 F 键并且没有其他修饰键
+      if (e.key === 'f' && !e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
+        // 防止在输入框中触发
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          // 聚焦到搜索框
+          const searchInput = document.querySelector('.search-control input[type="text"]');
+          if (searchInput) {
+            searchInput.focus();
+          }
+        }
       }
     };
 
     // 添加键盘事件监听器
-    if (selectedItem || showLogs) {
-      document.addEventListener('keydown', handleKeyDown);
-    }
+    document.addEventListener('keydown', handleKeyDown);
 
     // 清理函数：移除事件监听器
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [selectedItem, showLogs]);
+
 
   const handleUse = async () => {
     if (!selectedItem) return;
@@ -258,7 +322,7 @@ const BackpackTab = ({ backpack, items, onUseItem, onShowStatus, hideTopControls
 
   // 渲染道具图标
   const renderItemIcon = (item, name) => {
-    if (item && item.icon) {
+    if (item && item.icon && item.icon.trim() !== '-') {
       if (item.icon.startsWith('http') || item.icon.startsWith('data:image')) {
         // 处理图片URL
         return (
@@ -277,7 +341,7 @@ const BackpackTab = ({ backpack, items, onUseItem, onShowStatus, hideTopControls
         return (
           <div
             className="icon-placeholder"
-            title={item.icon}
+            // title={item.icon}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -291,7 +355,7 @@ const BackpackTab = ({ backpack, items, onUseItem, onShowStatus, hideTopControls
               fontSize: '24px'
             }}
           >
-            {name.charAt(0).toUpperCase()}
+            {item.icon}
           </div>
         );
       }
@@ -299,11 +363,55 @@ const BackpackTab = ({ backpack, items, onUseItem, onShowStatus, hideTopControls
       // 没有图标时显示首字母
       return (
         <div className="item-icon-placeholder">
-          {name.charAt(0)}
+          {name.charAt(0).toUpperCase()}
         </div>
       );
     }
   };
+
+  const renderFiltersAndSort = () => (
+    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+      <div className="filter-control">
+        <select
+          value={filterCategory}
+          title="筛选类别"
+          onChange={(e) => setFilterCategory(e.target.value)}
+        >
+          {allCategories.map(category => (
+            <option key={category} value={category}>{category}</option>
+          ))}
+        </select>
+
+        <select
+          value={filterParallelWorld}
+          title="筛选游戏世界"
+          onChange={(e) => setFilterParallelWorld(e.target.value)}
+        >
+          {allParallelWorlds.map(world => (
+            <option key={world} value={world}>{world}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="sort-control">
+        <select
+          value={sortField}
+          title="排序字段"
+          onChange={(e) => handleSort(e.target.value)}
+        >
+          <option value="name">名称</option>
+          <option value="category">类别</option>
+          <option value="count">数量</option>
+        </select>
+        <button
+          onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+          title={`当前为${sortDirection === 'asc' ? '正序' : '逆序'}，点击切换`}
+        >
+          {sortDirection === 'asc' ? '↑' : '↓'}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="backpack-tab">
@@ -312,54 +420,93 @@ const BackpackTab = ({ backpack, items, onUseItem, onShowStatus, hideTopControls
       {/* 筛选和排序控件 */}
       <div className="shop-controls" style={{ display: hideTopControls ? 'none' : 'flex', flexDirection:'row',justifyContent:'space-between' }}>
         <div style={{ display: 'flex',flexDirection:'row',justifyContent:'space-between'}}>
-          <div className="filter-control">
-
-
-            <select
-              value={filterCategory}
-              title="筛选类别"
-              onChange={(e) => setFilterCategory(e.target.value)}
-            >
-              {allCategories.map(category => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-
-            <select
-              value={filterParallelWorld}
-              title="筛选游戏世界"
-              onChange={(e) => setFilterParallelWorld(e.target.value)}
-            >
-              {allParallelWorlds.map(world => (
-                <option key={world} value={world}>{world}</option>
-              ))}
-            </select>
-
-
+          <div className="search-control" style={{ position: 'relative', display: 'inline-block', marginRight: '10px' }}>
+            <input
+              type="text"
+              placeholder="搜索道具名称、描述..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
+              style={{
+                padding: '5px 25px 5px 5px',
+                borderRadius: '4px',
+                border: '1px solid #ccc',
+                width: isMobile() ? '120px' : '200px',
+              }}
+            />
+            {searchTerm && (
+              <button
+                onClick={clearSearch}
+                style={{
+                  position: 'absolute',
+                  right: '5px',
+                  top: '35%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  padding: '0',
+                  width: '16px',
+                  height: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#999',
+                }}
+                title="清除搜索"
+              >
+                ×
+              </button>
+            )}
           </div>
 
-          <div className="sort-control">
-            <select
-              value={sortField}
-              title="排序字段"
-              onChange={(e) => handleSort(e.target.value)}
-            >
-              <option value="name">名称</option>
-              <option value="category">类别</option>
-              <option value="count">数量</option>
-            </select>
-            {/* 单个切换按钮替代原来的两个按钮 */}
-            <button
-              onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-              title={`当前为${sortDirection === 'asc' ? '正序' : '逆序'}，点击切换`}
-            >
-              {sortDirection === 'asc' ? '↑' : '↓'}
-            </button>
-            <button onClick={() => setShowLogs(true)} title="使用记录">🧾</button>
-          </div>
+          {isMobile() ? (
+            <>
+              <button
+                ref={filterButtonRef}
+                onClick={() => setShowFilters(!showFilters)}
+                style={{
+                  color: 'black',
+                  background: 'none',
+                  borderRadius: '4px',
+                  padding: '5px 10px',
+                  cursor: 'pointer',
+                  marginRight: '5px'
+                }}
+                title="筛选和排序"
+              >
+                ☰
+              </button>
+              {showFilters && (
+                <div
+                  className="filters-sort-popup"
+                  style={{
+                    position: 'absolute',
+                    top: filterButtonRef.current ?
+                      filterButtonRef.current.offsetTop + filterButtonRef.current.offsetHeight : '50px',
+                    left: '10px',
+                    background: 'white',
+                    padding: '1px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    zIndex: 100,
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  {renderFiltersAndSort()}
+                </div>
+              )}
+            </>
+          ) : (
+            renderFiltersAndSort()
+          )}
         </div>
 
         <div className='other-control'>
+          <button onClick={() => setShowLogs(true)} title="使用记录">🧾</button>
           <button onClick={onUseItem} title="刷新">⟳</button>
         </div>
 
@@ -397,11 +544,14 @@ const BackpackTab = ({ backpack, items, onUseItem, onShowStatus, hideTopControls
      {selectedItem && (
        <div className="use-modal">
          <h4>使用{selectedItem}</h4>
-         <p>道具名称: {selectedItem}</p>
-         <p>拥有数量: {backpack[selectedItem]}</p>
+         {/*<p>道具名称: {selectedItem}</p>*/}
+         {/*<div className="item-stock">*/}
+         {/*  <label>可使用 {backpack[selectedItem]}</label>*/}
+         {/*  /!*<label style={{marginLeft: '10px'}}>可使用(1-{backpack[selectedItem]})</label>*!/*/}
+         {/*</div>*/}
+
 
          <div>
-           <label>使用数量 (1-{backpack[selectedItem]}):</label>
            <input
              type="number"
              min="1"
@@ -409,11 +559,12 @@ const BackpackTab = ({ backpack, items, onUseItem, onShowStatus, hideTopControls
              value={useCount}
              onChange={(e) => setUseCount(e.target.value)}
            />
+           <label>/{backpack[selectedItem]}</label>
          </div>
 
          {!gmCommand ? (
            <>
-             <button onClick={handleUse}>确认</button>
+             <button onClick={handleUse} style={{marginTop:'20px'}}>确认</button>
              <button onClick={() => {
                setSelectedItem(null);
                setGmCommand('');

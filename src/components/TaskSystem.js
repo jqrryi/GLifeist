@@ -1,23 +1,27 @@
 // src/components/TaskSystem.js
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import CONFIG from '../config';
 import './TaskTab.css';
 import './TaskSystem.css';
 import TaskTab from './TaskTab'; // 引入TaskTab组件
-import '../assets/styles/taskEffects.css';
+import './taskEffects.css';
 import {useLogs} from "../contexts/LogContext";
-import { createTaskDirectly } from '../utils/taskUtils';
+import { createTaskDirectly, applyFieldShortcut } from '../utils/taskUtils';
 import SettingsModal from './SettingsModal';
+import {calculatePropertyLevel} from '../utils/characterUtils'; // 导入工具函数
+import AuthManager from '../utils/auth';
+import userDataManager from "../utils/userDataManager";
 
 const TaskSystem = ({
   settings,
+  defaultSettings,
   data,
   onAddTask,
   onUpdateTask,
   onDeleteTask,
   onCompleteTask,
   onShowStatus,
-  characterSettings,
+  // characterSettings,
   allItems,
   items,
   stats,
@@ -31,15 +35,13 @@ const TaskSystem = ({
   mainActionButtonSettings,
   borderSettings,
   calendarViewSettings,
-  codeSettings,
+  // codeSettings,
   onCharacterUpdate,
   onCreditUpdate,
   onItemUpdate,
   onTaskUpdate,
-  taskFieldMappings,
+  // taskFieldMappings,
   defaultViewMode,
-  defaultBoardGroupBy,
-  fieldSettings,
   creditTypes,
   expFormulas,
   quickAddTaskHint,
@@ -48,7 +50,32 @@ const TaskSystem = ({
   externalHideTopControls,
 }) => {
   const tasks = data.tasks || [];
-  // const taskFieldMappings = settings?.taskFieldMappings || {};
+  // console.log('loading settings', settings)
+  // console.log('loading taskfieldmappings', settings?.taskFieldMappings)
+
+  const taskFieldMappings = (settings?.taskFieldMappings && Object.keys(settings.taskFieldMappings).length > 0)
+    ? settings.taskFieldMappings
+    : ((defaultSettings?.taskFieldMappings && Object.keys(defaultSettings.taskFieldMappings).length > 0)
+       ? defaultSettings.taskFieldMappings
+       : {
+           // 提供默认的字段映射配置
+           categories: {},
+           domains: {},
+           priorities: {},
+           cycleTypes: {},
+           statuses: {}
+         });
+
+  // const taskFieldMappings = settings.taskFieldMappings?.length >0 ? settings.taskFieldMappings : defaultSettings.taskFieldMappings;
+
+
+  const characterSettings = (settings?.characterSettings && settings.characterSettings.length > 0)
+    ? settings.characterSettings
+    : ((defaultSettings?.characterSettings && defaultSettings.characterSettings.length > 0)
+       ? defaultSettings.characterSettings
+       : []);
+
+  // console.log('taskFieldMappings: ', taskFieldMappings)
 
   const [showTaskDetails, setShowTaskDetails] = useState(null);
   const [showTaskMenu, setShowTaskMenu] = useState(null);
@@ -56,17 +83,19 @@ const TaskSystem = ({
   const [characterInfo, setCharacterInfo] = useState({
     level: 1,
     experience: 0,
-    credits: {}
+    credits: {},
   });
 
   const [hoveredTask, setHoveredTask] = useState(null);
   const [selectedField, setSelectedField] = useState(() => {
-    const savedSelectedField = localStorage.getItem('selectedField');
+    // const savedSelectedField = localStorage.getItem('selectedField');
+    const savedSelectedField = userDataManager.getUserData('selectedField');
     return savedSelectedField || null;
   });
 
   const [selectedFieldValue, setSelectedFieldValue] = useState(() => {
-    const savedSelectedFieldValue = localStorage.getItem('selectedFieldValue');
+    // const savedSelectedFieldValue = localStorage.getItem('selectedFieldValue');
+    const savedSelectedFieldValue = userDataManager.getUserData('selectedFieldValue');
     // 如果保存的值是字符串 "null" 或不存在，则返回 null
     if (!savedSelectedFieldValue || savedSelectedFieldValue === 'null') {
       return null;
@@ -75,29 +104,34 @@ const TaskSystem = ({
   });
 
   const [colorScheme, setColorScheme] = useState(() => {
-    const savedColorScheme = localStorage.getItem('colorScheme');
+    // const savedColorScheme = localStorage.getItem('colorScheme');
+    const savedColorScheme = userDataManager.getUserData('colorScheme');
     return savedColorScheme || 'category';
   });
 
   const [layout, setLayout] = useState(() => {
-    const savedLayout = localStorage.getItem('layout');
+    // const savedLayout = localStorage.getItem('layout');
+    const savedLayout = userDataManager.getUserData('layout');
     return savedLayout || 'grid-2';
   });
 
   const [sortField, setSortField] = useState(() => {
-    const savedSortField = localStorage.getItem('sortField');
+    // const savedSortField = localStorage.getItem('sortField');
+    const savedSortField = userDataManager.getUserData('sortField');
     return savedSortField || 'priority';
   });
 
   const [sortOrder, setSortOrder] = useState(() => {
-    const savedSortOrder = localStorage.getItem('sortOrder');
+    // const savedSortOrder = localStorage.getItem('sortOrder');
+    const savedSortOrder = userDataManager.getUserData('sortOrder');
     return savedSortOrder || 'desc';
   });
   // 添加经典模式视图状态
   const [classicViewMode, setClassicViewMode] = useState(null);
 
   const [toolbarScale, setToolbarScale] = useState(() => {
-    const savedScale = localStorage.getItem('toolbarScale');
+    // const savedScale = localStorage.getItem('toolbarScale');
+    const savedScale = userDataManager.getUserData('toolbarScale');
     return savedScale || '1';
   });
 
@@ -135,7 +169,8 @@ const TaskSystem = ({
   const [toolbarSize, setToolbarSize] = useState({ width: 0, height: 0 });
   // 在 TaskSystem 组件中修改 toolbarPosition 状态初始化
   const [toolbarPosition, setToolbarPosition] = useState(() => {
-    const savedPosition = localStorage.getItem('toolbarPosition');
+    // const savedPosition = localStorage.getItem('toolbarPosition');
+    const savedPosition = userDataManager.getUserData('toolbarPosition');
     // console.log('Initializing toolbarPosition from localStorage:', savedPosition);
     // 确保只使用支持的值
     const validPositions = ['top', 'vertical', 'horizontal'];
@@ -146,11 +181,12 @@ const TaskSystem = ({
   });
   // 添加 toolbar 自定义位置状态
   const [toolbarCustomPosition, setToolbarCustomPosition] = useState(() => {
-    const savedCustomPosition = localStorage.getItem('toolbarCustomPosition');
+    // const savedCustomPosition = localStorage.getItem('toolbarCustomPosition');
+    const savedCustomPosition = userDataManager.getUserData('toolbarCustomPosition');
     if (savedCustomPosition) {
       try {
         const position = JSON.parse(savedCustomPosition);
-        console.log('Loaded toolbar position from localStorage:', position);
+        // console.log('Loaded toolbar position from localStorage:', position);
         if (typeof position === 'object' && position !== null &&
             (position.x !== null || position.y !== null)) {
           return {
@@ -204,7 +240,8 @@ const TaskSystem = ({
 
   // 在 useEffect 中添加状态保存逻辑
   useEffect(() => {
-    localStorage.setItem('selectedField', selectedField);
+    // localStorage.setItem('selectedField', selectedField);
+    userDataManager.setUserData('selectedField', selectedField);
   }, [selectedField]);
 
   // useEffect(() => {
@@ -212,14 +249,18 @@ const TaskSystem = ({
   // }, [selectedFieldValue]);
   useEffect(() => {
     if (selectedFieldValue === null) {
-      localStorage.setItem('selectedFieldValue', 'null');
+      // localStorage.setItem('selectedFieldValue', 'null');
+      userDataManager.setUserData('selectedFieldValue', 'null');
     } else {
-      localStorage.setItem('selectedFieldValue', selectedFieldValue);
+      // localStorage.setItem('selectedFieldValue', selectedFieldValue);
+      userDataManager.setUserData('selectedFieldValue', selectedFieldValue);
     }
   }, [selectedFieldValue]);
   useEffect(() => {
-    const savedSelectedField = localStorage.getItem('selectedField');
-    const savedSelectedFieldValue = localStorage.getItem('selectedFieldValue');
+    // const savedSelectedField = localStorage.getItem('selectedField');
+    // const savedSelectedFieldValue = localStorage.getItem('selectedFieldValue');
+    const savedSelectedField = userDataManager.getUserData('selectedField');
+    const savedSelectedFieldValue = userDataManager.getUserData('selectedFieldValue');
 
     // 如果有保存的字段选择，则恢复它
     if (savedSelectedField) {
@@ -233,23 +274,28 @@ const TaskSystem = ({
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('colorScheme', colorScheme);
+    // localStorage.setItem('colorScheme', colorScheme);
+    userDataManager.setUserData('colorScheme', colorScheme);
   }, [colorScheme]);
 
   useEffect(() => {
-    localStorage.setItem('layout', layout);
+    // localStorage.setItem('layout', layout);
+    userDataManager.setUserData('layout', layout);
   }, [layout]);
 
   useEffect(() => {
-    localStorage.setItem('sortField', sortField);
+    // localStorage.setItem('sortField', sortField);
+    userDataManager.setUserData('sortField', sortField);
   }, [sortField]);
 
   useEffect(() => {
-    localStorage.setItem('sortOrder', sortOrder);
+    // localStorage.setItem('sortOrder', sortOrder);
+    userDataManager.setUserData('sortOrder', sortOrder);
   }, [sortOrder]);
 
   useEffect(() => {
-    localStorage.setItem('classicViewMode', classicViewMode);
+    // localStorage.setItem('classicViewMode', classicViewMode);
+    userDataManager.setUserData('classicViewMode', classicViewMode);
   }, [classicViewMode]);
 
   useEffect(() => {
@@ -297,9 +343,13 @@ const TaskSystem = ({
     };
   }, [showCharacterStatsPopup]);
 
-
+  const tooltipRef = useRef(null);
 
   const formatNumber = (num) => {
+    if (num === undefined  || num === null || isNaN(num)) {
+      return '';
+    }
+
     if (num >= 1000000000) { // 十亿
       return (num / 1000000000).toFixed(1) + 'b';
     } else if (num >= 10000000) { // 一千万
@@ -311,17 +361,19 @@ const TaskSystem = ({
     } else if (num >= 1000) { // 一千
       return (num / 1000).toFixed(1) + 'k';
     }
-    return num.toString();
+    return num.toFixed(0).toString();
   };
 
   const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(() => {
-    const savedCollapsed = localStorage.getItem('toolbarCollapsed');
+    // const savedCollapsed = localStorage.getItem('toolbarCollapsed');
+    const savedCollapsed = userDataManager.getUserData('toolbarCollapsed');
     return savedCollapsed === 'true';
   });
 
   // 新增状态：控制显示模式（卡片模式或经典模式）
   const [viewMode, setViewMode] = useState(() => {
-    const savedViewMode = localStorage.getItem('taskViewMode');
+    // const savedViewMode = localStorage.getItem('taskViewMode');
+    const savedViewMode = userDataManager.getUserData('taskViewMode');
     // 如果保存的视图模式是具体的视图类型，则设置为 'classic'
     if (savedViewMode && (savedViewMode === 'list' || savedViewMode === 'board' || savedViewMode === 'calendar')) {
       return 'classic';
@@ -342,7 +394,6 @@ const TaskSystem = ({
   }, [editingTask, viewMode]);
 
   // 从配置中获取字段映射
-
   const fieldLabels = {
     category: '类别',
     domain: '领域',
@@ -350,7 +401,6 @@ const TaskSystem = ({
     task_type: '循环周期',
     status: '状态'
   };
-
   const fieldOptions = {
     category: Object.keys(taskFieldMappings.categories || {}),
     domain: Object.keys(taskFieldMappings.domains || {}),
@@ -470,7 +520,7 @@ const TaskSystem = ({
 
         // 处理"全部"状态
         if (hotkeyField === 'status' && event.key === 'g') {
-          console.log('选择状态: 全部');
+          // console.log('选择状态: 全部');
           setSelectedField('status');
           setSelectedFieldValue('all');
           setHotkeyMode(null);
@@ -487,12 +537,14 @@ const TaskSystem = ({
         });
 
         if (valueMap[event.key]) {
-          console.log('选择字段值:', hotkeyField, valueMap[event.key]);
+          // console.log('选择字段值:', hotkeyField, valueMap[event.key]);
           setSelectedField(hotkeyField);
           setSelectedFieldValue(valueMap[event.key]);
           // 保存状态到 localStorage
-          localStorage.setItem('selectedField', hotkeyField);
-          localStorage.setItem('selectedFieldValue', valueMap[event.key]);
+          // localStorage.setItem('selectedField', hotkeyField);
+          // localStorage.setItem('selectedFieldValue', valueMap[event.key]);
+          userDataManager.setUserData('selectedField', hotkeyField);
+          userDataManager.setUserData('selectedFieldValue', valueMap[event.key]);
           setHotkeyMode(null);
           setHotkeyField(null);
           setHotkeyHints({});
@@ -663,10 +715,11 @@ const TaskSystem = ({
       setCharacterInfo({
         level: data.stats.level || 1,
         experience: data.stats.exp || 0,
-        credits: data.credits || {}
+        credits: data.credits || {},
       });
     }
   }, [data]);
+
 
   //
   // useEffect(() => {
@@ -714,8 +767,10 @@ const TaskSystem = ({
       setSelectedFieldValue(value);
 
       // 保存到 localStorage
-      localStorage.setItem('selectedField', field);
-      localStorage.setItem('selectedFieldValue', value);
+      // localStorage.setItem('selectedField', field);
+      // localStorage.setItem('selectedFieldValue', value);
+      userDataManager.setUserData('selectedField', field);
+      userDataManager.setUserData('selectedFieldValue', value);
     };
 
     window.addEventListener('setTaskFieldAndValue', handleSetTaskFieldAndValue);
@@ -735,8 +790,10 @@ const TaskSystem = ({
       setSelectedFieldValue(value);
 
       // 保存到 localStorage
-      localStorage.setItem('selectedField', field);
-      localStorage.setItem('selectedFieldValue', value);
+      // localStorage.setItem('selectedField', field);
+      // localStorage.setItem('selectedFieldValue', value);
+      userDataManager.setUserData('selectedField', field);
+      userDataManager.setUserData('selectedFieldValue', value);
     };
 
     window.addEventListener('setTaskFieldAndValue', handleSetTaskFieldAndValue);
@@ -749,7 +806,8 @@ const TaskSystem = ({
   // 添加工具栏位置更新函数
   const updateToolbarPosition_deprecated = (position) => {
     setToolbarPosition(position);
-    localStorage.setItem('toolbarPosition', position);
+    // localStorage.setItem('toolbarPosition', position);
+    userDataManager.setUserData('toolbarPosition', position);
   };
 
   const updateToolbarPosition = (position) => {
@@ -761,12 +819,14 @@ const TaskSystem = ({
     }
 
     setToolbarPosition(position);
-    localStorage.setItem('toolbarPosition', position);
+    // localStorage.setItem('toolbarPosition', position);
+    userDataManager.setUserData('toolbarPosition', position);
 
     // 重置自定义位置和按钮滚动位置
     if (position === 'top') {
       setToolbarCustomPosition({ x: null, y: null });
-      localStorage.removeItem('toolbarCustomPosition');
+      // localStorage.removeItem('toolbarCustomPosition');
+      userDataManager.clearUserData('toolbarCustomPosition');
     }
 
     resetButtonScroll();
@@ -862,6 +922,7 @@ const TaskSystem = ({
   }
 
     localStorage.setItem('taskViewMode', mode);
+    userDataManager.setUserData('taskViewMode', mode);
   };
 
   useEffect(() => {
@@ -1323,13 +1384,13 @@ const TaskSystem = ({
 
     const getButtonLabel = (id) => {
       const labels = {
-        position: '位置切换',
+        position: '切换工具栏位置',
         list: '列表模式',
         board: '看板模式',
         calendar: '日历模式',
         card: '卡片模式',
-        scale: '缩放',
-        hide: '隐藏控件',
+        scale: '缩放工具栏',
+        hide: '隐藏控件&导航栏',
         logs: '任务日志',
         quick: '快速添加',
         refresh: '刷新'
@@ -1478,6 +1539,7 @@ const TaskSystem = ({
             onClick={() => {
               setIsToolbarCollapsed(false);
               localStorage.setItem('toolbarCollapsed', 'false');
+              userDataManager.setUserData('toolbarCollapsed', 'false');
             }}
             title="展开工具栏"
             style={{
@@ -1557,7 +1619,8 @@ const TaskSystem = ({
             onTouchStart={handleTouchStart}
             onClick={() => {
               setIsToolbarCollapsed(true);
-              localStorage.setItem('toolbarCollapsed', 'true');
+              // localStorage.setItem('toolbarCollapsed', 'true');
+              userDataManager.setUserData('toolbarCollapsed', 'true');
             }}
             title="折叠工具栏"
             style={{
@@ -1652,12 +1715,14 @@ const TaskSystem = ({
 
   const handleHideStateChange = (e) => {
     // 获取当前的全局隐藏状态
-    const currentGlobalHideState = parseInt(localStorage.getItem('floatingButtonHideState') || '0');
+    // const currentGlobalHideState = parseInt(localStorage.getItem('floatingButtonHideState') || '0');
+    const currentGlobalHideState = parseInt(userDataManager.getUserData('floatingButtonHideState') || '0');
     // 切换到下一个状态 (0 -> 1 -> 2 -> 0)
     const nextGlobalHideState = (currentGlobalHideState + 1) % 3;
 
     // 更新本地存储
-    localStorage.setItem('floatingButtonHideState', nextGlobalHideState.toString());
+    // localStorage.setItem('floatingButtonHideState', nextGlobalHideState.toString());
+    userDataManager.setUserData('floatingButtonHideState', nextGlobalHideState.toString());
 
     // 派发事件通知 App.js 更新状态
     window.dispatchEvent(new CustomEvent('floatingButtonHideStateChange', {
@@ -1665,7 +1730,8 @@ const TaskSystem = ({
     }));
 
     // 同时更新旧的 hideTopControls 状态以保持兼容性
-    localStorage.setItem('hideTopControls', (nextGlobalHideState >= 1).toString());
+    // localStorage.setItem('hideTopControls', (nextGlobalHideState >= 1).toString());
+    userDataManager.setUserData('hideTopControls', (nextGlobalHideState >= 1).toString());
     window.dispatchEvent(new CustomEvent('toggleTopNavVisibility'));
   };
 
@@ -1691,7 +1757,8 @@ const TaskSystem = ({
                 className="toolbar-collapse-btn"
                 onClick={() => {
                   setIsToolbarCollapsed(true);
-                  localStorage.setItem('toolbarCollapsed', 'true');
+                  // localStorage.setItem('toolbarCollapsed', 'true');
+                  userDataManager.setUserData('toolbarCollapsed', 'true');
                 }}
                 title="折叠工具栏"
                 style={getButtonStyle()}
@@ -1800,12 +1867,12 @@ const TaskSystem = ({
                 key="hide"
                 className="toolbar-hide-controls-btn"
                 onClick={() => {handleHideStateChange()}}
-                title={externalHideTopControls ? '显示导航栏和控件' : hideTopNav ? '隐藏控件' : '隐藏导航栏'}
+                title={externalHideTopControls ? '隐藏导航栏和控件' : hideTopNav ? '隐藏控件' : '显示全部'}
                 style={getButtonStyle()}
                 onMouseEnter={handleButtonMouseEnter}
                 onMouseLeave={handleButtonMouseLeave}
               >
-                {externalHideTopControls ? '🟢' : hideTopNav ? '⛔' : '🚫'}
+                {externalHideTopControls ? '⛔' : hideTopNav ? '🚫' : '🟢'}
               </button>
             );
 
@@ -1823,7 +1890,7 @@ const TaskSystem = ({
                 onMouseEnter={handleButtonMouseEnter}
                 onMouseLeave={handleButtonMouseLeave}
               >
-                📜
+                🗐
               </button>
             );
 
@@ -1992,7 +2059,8 @@ const TaskSystem = ({
         }
 
         setToolbarCustomPosition(newPosition);
-        localStorage.setItem('toolbarCustomPosition', JSON.stringify(newPosition));
+        // localStorage.setItem('toolbarCustomPosition', JSON.stringify(newPosition));
+        userDataManager.setUserData('toolbarCustomPosition', JSON.stringify(newPosition));
       }
     };
 
@@ -2011,7 +2079,8 @@ const TaskSystem = ({
   // 初始化时检查当前视图模式
   const checkInitialViewMode = () => {
     // 从 localStorage 或 URL 中获取初始视图模式
-    const savedViewMode = localStorage.getItem('taskViewMode');
+    // const savedViewMode = localStorage.getItem('taskViewMode');
+    const savedViewMode = userDataManager.getUserData('taskViewMode');
     if (savedViewMode && ['list', 'board', 'calendar'].includes(savedViewMode)) {
       setClassicViewMode(savedViewMode);
     } else if (window.location.hash.includes('board')) {
@@ -2161,7 +2230,8 @@ const TaskSystem = ({
           }
 
           setToolbarCustomPosition(newPosition);
-          localStorage.setItem('toolbarCustomPosition', JSON.stringify(newPosition));
+          // localStorage.setItem('toolbarCustomPosition', JSON.stringify(newPosition));
+          userDataManager.setUserData('toolbarCustomPosition', JSON.stringify(newPosition));
         }
         if (isTouchScrolling) {
           setIsTouchScrolling(false);
@@ -2505,7 +2575,7 @@ const TaskSystem = ({
     try {
       // 1. 更新经验奖励
       if (task.exp_reward && task.exp_reward > 0) {
-        console.log('更新角色经验值中:', task.exp_reward);
+        // console.log('更新角色经验值中:', task.exp_reward);
         try {
           const response = await fetch(`${CONFIG.API_BASE_URL}/api/character/exp`, {
             method: 'POST',
@@ -2520,17 +2590,17 @@ const TaskSystem = ({
           }
 
           const result = await response.json();
-          console.log('经验值更新结果:', result);
+          // console.log('经验值更新结果:', result);
         } catch (expError) {
           console.error('更新经验值失败:', expError);
         }
       }
-      console.log('更新角色经验值成功');
+      // console.log('更新角色经验值成功');
 
       // 2. 更新积分奖励
       if (task.credits_reward) {
         for (const [creditType, amount] of Object.entries(task.credits_reward)) {
-          console.log(`更新角色${creditType}积分中:`, amount);
+          // console.log(`更新角色${creditType}积分中:`, amount);
           if (amount > 0) {
             try {
               const creditResponse = await fetch(`${CONFIG.API_BASE_URL}/api/credits/add/${creditType}/${amount}`, {
@@ -2546,16 +2616,16 @@ const TaskSystem = ({
               }
 
               const creditResult = await creditResponse.json();
-              console.log(`积分${creditType}更新结果:`, creditResult);
+              // console.log(`积分${creditType}更新结果:`, creditResult);
             } catch (creditError) {
               console.error(`更新积分${creditType}失败:`, creditError);
               continue; // 继续处理其他积分类型
             }
 
             // 3. 根据积分类型到属性类别的映射关系更新属性点
-            if (settings && settings.characterSettings) {
+            if (characterSettings) {
               // 查找匹配的设置项
-              const matchedSetting = settings.characterSettings.find(
+              const matchedSetting = characterSettings.find(
                 item => item.creditType === creditType
               );
 
@@ -2575,7 +2645,7 @@ const TaskSystem = ({
                   }
 
                   const propertyResult = await propertyResponse.json();
-                  console.log(`属性${matchedSetting.propertyCategory}更新结果:`, propertyResult);
+                  // console.log(`属性${matchedSetting.propertyCategory}更新结果:`, propertyResult);
                 } catch (propertyError) {
                   console.error(`更新属性${matchedSetting.propertyCategory}失败:`, propertyError);
                 }
@@ -2610,6 +2680,7 @@ const TaskSystem = ({
       } else if (newCompletedCount > 0 && newCompletedCount < max_completes) {
         newStatus = '重复中';
       }
+
       // 完成次数溢出的任务：只更新状态为已完成，不发奖励
       if (newCompletedCount > max_completes) {
         const updatedTask0 = {
@@ -2618,7 +2689,7 @@ const TaskSystem = ({
         };
 
         // 发送更新请求
-        const response0 = await fetch(`${CONFIG.API_BASE_URL}/api/tasks/${taskId}/complete`, {
+        const response0 = await fetch(`${CONFIG.API_BASE_URL}/api/tasks/${taskId}/update_status_completed`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -2634,7 +2705,7 @@ const TaskSystem = ({
           setShowConfirmation(null)
           onCompleteTask();
         }
-        console.log('#1：任务完成')
+        // console.log('#1：任务完成')
 
         return;
       }
@@ -2650,7 +2721,7 @@ const TaskSystem = ({
         complete_time: completeTime,
         items_reward: task.items_reward,
       };
-      console.log('发送到后台的更新任务数据:', updatedTask);
+      // console.log('发送到后台的更新任务数据:', updatedTask);
 
       // 发送更新请求至后台
       const response = await fetch(`${CONFIG.API_BASE_URL}/api/tasks/${taskId}/complete`, {
@@ -2667,16 +2738,20 @@ const TaskSystem = ({
         {settings.enableEffectOnTaskCompletion && playTaskCompleteEffect(task);}
         onShowStatus(result.message || '任务已完成');
         setShowConfirmation(null)
-        onCompleteTask();
-        console.log('#2：任务已完成')
+        // console.log('#2：任务已完成')
 
         // 显示奖励信息
         // alert(`任务已完成!\n\n获得以下奖励:\n${result.reward}`);
+        if (result.reward) {
+          alert(`任务已完成!\n\n获得以下奖励:\n${result.reward}`);
+        }
         addLog('任务','完成任务',`完成${task.name}: ${result.reward}`)
 
         // 新增：更新角色的经验值、积分和属性点
-        await updateCharacterStats(task);
+        // await updateCharacterStats(task);
        // 更新道具奖励: 后台处理
+
+        onCompleteTask();
       } else {
         // alert(result.error || '完成任务失败');
         addLog('任务','完成失败',`任务${task.name} 完成失败: ${result.error}`)
@@ -2823,52 +2898,105 @@ const TaskSystem = ({
             minWidth: 0,
             flex: '0 1 auto'
           }}>
-            {settings?.characterSettings ? (
-              settings.characterSettings
+            {characterSettings ? (
+              characterSettings
                 .filter(setting => characterInfo.credits.hasOwnProperty(setting.creditType))
                 .map(setting => {
-                  const type = setting.creditType;
-                  const value = characterInfo.credits[type];
-                  const icon = setting.creditIcon || type;
+                  const creditType = setting.creditType;
+                  const creditValue = characterInfo.credits[creditType];
+                  const creditIcon = setting.creditIcon || creditType;
+                  // const domain = setting?.domain;
+                  const propertyCategory = setting?.propertyCategory;
+                  const propertyValue = data.properties[propertyCategory]
+                  const propertyLevel = calculatePropertyLevel(propertyValue, propertyCategory, settings.expFormulas);
+                  const titleText = `${creditType}${setting?.creditIcon || ''}: ${creditValue} ${
+                        [setting?.domain, setting?.propertyCategory].filter(Boolean).join('/') || setting?.icon
+                          ? `${"\n"+
+                              [setting?.domain, setting?.propertyCategory].filter(Boolean).join('/') +
+                              (setting?.icon ? setting?.icon : "")+ ": " + propertyValue + " (Lv." + propertyLevel.level + ")"
+                            }`
+                          : ''
+                      } `
 
                   return (
                     <span
-                      key={type}
-                      title={`${type}: ${value}`}
+                      key={creditType}
+                      title={titleText}
+                      onClick={(e) => {
+                        e.stopPropagation();
+
+                        // 移除已存在的tooltip
+                        if (tooltipRef.current && tooltipRef.current.parentNode) {
+                          tooltipRef.current.parentNode.removeChild(tooltipRef.current);
+                        }
+
+                        // 创建新的tooltip
+                        const tooltip = document.createElement('div');
+                        tooltip.textContent = titleText;
+                        tooltip.style.cssText = `    position: fixed;
+                          top: ${e.clientY + 10}px;
+                          left: ${e.clientX - 20}px;
+                          background: #333;
+                          color: white;
+                          padding: 8px;
+                          border-radius: 4px;
+                          z-index: 1000;
+                          font-size: 12px;
+                          white-space: pre-line;
+                          max-width: 300px;
+                        `;
+                        document.body.appendChild(tooltip);
+
+                        // 保存当前tooltip引用
+                        tooltipRef.current = tooltip;
+
+                        // 几秒后自动消失
+                        setTimeout(() => {
+                          if (tooltip.parentNode) {
+                            tooltip.parentNode.removeChild(tooltip);
+                            if (tooltipRef.current === tooltip) {
+                              tooltipRef.current = null;
+                            }
+                          }
+                        }, 2000);
+                      }}
+
                       style={{
+                        cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         whiteSpace: 'nowrap'
                       }}
                     >
-                      {typeof icon === 'string' && icon.startsWith('http') ? (
-                        <img src={icon} alt={type} className="credit-icon" style={{width: '16px', height: '16px', marginRight: '1px'}} />
+                      {typeof creditIcon === 'string' && creditIcon.startsWith('http') ? (
+                        <img src={creditIcon} alt={creditType} className="credit-icon" style={{width: '16px', height: '16px', marginRight: '1px'}} />
                       ) : (
-                        <span style={{marginRight: '1px'}}>{icon}</span>
+                        <span style={{marginRight: '1px'}}>{creditIcon}</span>
                       )}
-                      {formatNumber(value)}
+                      {formatNumber(creditValue)}
                     </span>
                   );
                 })
             ) : (
               Object.entries(characterInfo.credits || {}).map(([type, value]) => {
-                const creditSetting = settings?.characterSettings?.find(item => item.creditType === type);
-                const icon = creditSetting?.creditIcon || type;
+                const creditSetting = characterSettings?.find(item => item.creditType === type);
+                const creditIcon = creditSetting?.creditIcon || type;
+                const domain = creditSetting?.domain;
 
                 return (
                   <span
                     key={type}
-                    title={`${type}: ${value}`}
+                    title={`${type} (${domain}): ${value}`}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       whiteSpace: 'nowrap'
                     }}
                   >
-                    {typeof icon === 'string' && icon.startsWith('http') ? (
-                      <img src={icon} alt={type} className="credit-icon" style={{width: '16px', height: '16px', marginRight: '1px'}} />
+                    {typeof creditIcon === 'string' && creditIcon.startsWith('http') ? (
+                      <img src={creditIcon} alt={type} className="credit-icon" style={{width: '16px', height: '16px', marginRight: '1px'}} />
                     ) : (
-                      <span style={{marginRight: '1px'}}>{icon}</span>
+                      <span style={{marginRight: '1px'}}>{creditIcon}</span>
                     )}
                     {value}
                   </span>
@@ -3076,7 +3204,7 @@ const TaskSystem = ({
           <div className="button-area-center" style={{gap: '1px'}}>
             {selectedFieldValue && (
                 <div className="selected-field-value">
-                  <h  style={{fontWeight:"bold"}}>{selectedFieldValue === 'all' ? '全部' : selectedFieldValue} </h>
+                  <p  style={{fontWeight:"bold"}}>{selectedFieldValue === 'all' ? '全部' : selectedFieldValue} </p>
                   {!isDesktop && (
                     <p style={{fontSize:"10px"}}> ({`按“${colorScheme === 'category' ? '类别' : colorScheme === 'domain' ? '领域' : '优先级'}”字段配色`})</p>
                   )}
@@ -3149,6 +3277,7 @@ const TaskSystem = ({
                 {fieldOptions[field] && fieldOptions[field].length > 0 ? (
                   fieldOptions[field].map((option, index) => {
                     const displayInfo = getFieldDisplayInfo(fieldOptionsMap[field], option);
+                    // console.log('displayInfo:', displayInfo)
                     const { taskCount, totalExp, totalCredits } = getTaskStatsForFieldOption(field, option);
 
                     return (
@@ -3160,8 +3289,10 @@ const TaskSystem = ({
                           setSelectedField(field);
                           setSelectedFieldValue(option);
                           // 保存状态到 localStorage
-                          localStorage.setItem('selectedField', field);
-                          localStorage.setItem('selectedFieldValue', option);
+                          // localStorage.setItem('selectedField', field);
+                          // localStorage.setItem('selectedFieldValue', option);
+                          userDataManager.setUserData('selectedField', field);
+                          userDataManager.setUserData('selectedFieldValue', option);
                         }}
                       >
                         <div className="desktop-option-name">{option}</div>
@@ -3169,7 +3300,7 @@ const TaskSystem = ({
                           <span className="task-count">📌{taskCount} </span>
                           <span className="exp-total">⚔{Number.isFinite(totalExp) ? (totalExp % 1 === 0 ? totalExp : totalExp.toFixed(1)) : totalExp}</span>
                           {Object.entries(totalCredits).map(([creditType, totalAmount]) => {
-                            const creditSetting = settings?.characterSettings?.find(item => item.creditType === creditType);
+                            const creditSetting = characterSettings?.find(item => item.creditType === creditType);
                             const icon = creditSetting?.creditIcon || creditType;
 
                             return (
@@ -3201,8 +3332,10 @@ const TaskSystem = ({
                     onClick={() => {
                       setSelectedField('status');
                       setSelectedFieldValue('all');
-                      localStorage.setItem('selectedField', 'status');
-                      localStorage.setItem('selectedFieldValue', 'all');
+                      // localStorage.setItem('selectedField', 'status');
+                      // localStorage.setItem('selectedFieldValue', 'all');
+                      userDataManager.setUserData('selectedField', 'status');
+                      userDataManager.setUserData('selectedFieldValue', 'all');
                     }}
                   >
                     <div className="desktop-option-name">全部</div>
@@ -3239,7 +3372,8 @@ const TaskSystem = ({
               onClick={() => {
                 setSelectedFieldValue(option);
                 // 保存状态到 localStorage
-                localStorage.setItem('selectedFieldValue', option);
+                // localStorage.setItem('selectedFieldValue', option);
+                userDataManager.setUserData('selectedFieldValue', option);
               }}
             >
               <br></br>
@@ -3250,7 +3384,7 @@ const TaskSystem = ({
                 <span className="task-count">📌{taskCount} </span>
                 <span className="exp-total">⚔{Number.isFinite(totalExp) ? (totalExp % 1 === 0 ? totalExp : totalExp.toFixed(1)) : totalExp}</span>
                 {Object.entries(totalCredits).map(([creditType, totalAmount]) => {
-                  const creditSetting = settings?.characterSettings?.find(item => item.creditType === creditType);
+                  const creditSetting = characterSettings?.find(item => item.creditType === creditType);
                   const icon = creditSetting?.creditIcon || creditType;
 
                   return (
@@ -3279,7 +3413,8 @@ const TaskSystem = ({
             style={{ backgroundColor: '#CCCCCC' }}
             onClick={() => {
               setSelectedFieldValue('all');
-              localStorage.setItem('selectedFieldValue', 'all');
+              // localStorage.setItem('selectedFieldValue', 'all');
+              userDataManager.setUserData('selectedFieldValue', 'all');
             }}
           >
             <br></br>
@@ -3518,7 +3653,7 @@ const TaskSystem = ({
                   <div className="task-rewards">
                     <span>⚔{task.exp_reward || 0}</span>
                     {task.credits_reward && Object.entries(task.credits_reward).map(([type, amount]) => {
-                      const creditSetting = settings?.characterSettings?.find(item => item.creditType === type);
+                      const creditSetting = characterSettings?.find(item => item.creditType === type);
                       const icon = creditSetting?.creditIcon || type;
 
                       return (
@@ -3689,7 +3824,7 @@ const TaskSystem = ({
           <div className="task-hover-rewards">
             <span className="reward-item" title="经验值">⚔{showTaskDetails.exp_reward || 0}</span>
             {showTaskDetails.credits_reward && Object.entries(showTaskDetails.credits_reward).map(([type, amount]) => {
-              const creditSetting = settings?.characterSettings?.find(item => item.creditType === type);
+              const creditSetting = characterSettings?.find(item => item.creditType === type);
               const icon = creditSetting?.creditIcon || type;
 
               return (
@@ -3891,7 +4026,7 @@ const TaskSystem = ({
       particleContainer.style.zIndex = '9999';
 
       document.body.appendChild(particleContainer);
-      console.log('Created particle container');
+      // console.log('Created particle container');
 
       // 根据粒子类型创建不同特效
       const particleCount = Math.floor(30 * intensity);
@@ -3911,15 +4046,15 @@ const TaskSystem = ({
 
         particleContainer.appendChild(particle);
       }
-      console.log('Created', particleCount, 'particles');
+      // console.log('Created', particleCount, 'particles');
 
       // 3秒后移除粒子容器
       setTimeout(() => {
         if (document.body.contains(particleContainer)) {
           document.body.removeChild(particleContainer);
-          console.log('Removed particle container');
+          // console.log('Removed particle container');
         }
-      }, 3000);
+      }, 2000);
     } catch (error) {
       console.error('Error showing particle effect:', error);
     }
@@ -3943,17 +4078,17 @@ const TaskSystem = ({
       if (confirmButton && animationType) {
         // 添加动画类
         confirmButton.classList.add(animationType);
-        console.log('Applied animation class:', animationType);
+        // console.log('Applied animation class:', animationType);
 
         // 移除动画类
         setTimeout(() => {
           if (confirmButton.classList.contains(animationType)) {
             confirmButton.classList.remove(animationType);
-            console.log('Removed animation class:', animationType);
+            // console.log('Removed animation class:', animationType);
           }
         }, duration);
       } else {
-        console.log('Confirm button or animation type not found');
+        // console.log('Confirm button or animation type not found');
       }
     } catch (error) {
       console.error('Error animating task card:', error);
@@ -3962,7 +4097,7 @@ const TaskSystem = ({
 
   // 解析快速任务输入
   const parseQuickTaskInput = (input) => {
-    console.log('解析输入:', input);
+    // console.log('解析输入:', input);
 
     // 分离任务名称和代码部分
     const parts = input.split('$');
@@ -4018,39 +4153,35 @@ const TaskSystem = ({
       const codes = codesWithoutTags.split(/[\s,，]+/)
         .map(code => code.trim())
         .filter(code => code.length > 0);
-      console.log('处理代码2:', codes);
+      // console.log('处理代码2:', codes);
 
       codes.forEach(code => {
-        applyFieldShortcut(newFormData, code);
+        applyFieldShortcut(newFormData, code, taskFieldMappings);
       });
     }
 
-    console.log('处理快速任务1:', newFormData)
+    // console.log('处理快速任务1:', newFormData)
     return newFormData;
   };
 
-  // 应用字段快捷方式
-  const applyFieldShortcut = (formData, code) => {
-    // 使用传入的 codeSettings props
-    const currentCodeSettings = codeSettings;
 
-    // 确保 codeSettings 存在且有正确的结构
-    if (!currentCodeSettings) {
-      console.log('codeSettings 不存在');
+  const applyFieldShortcut_new = (formData, code) => {
+    // 确保 taskFieldMappings 存在且有正确的结构
+    if (!taskFieldMappings) {
+      // console.log('taskFieldMappings 不存在');
       return;
     }
-
 
     // 特殊处理最大重复次数，格式如 "n5" 表示最大重复次数为5
     const num = parseInt(code);
     if (!isNaN(num) && num > 0) {
       formData.max_completions = num;
-      console.log(`设置最大重复次数为 ${num}`);
+      // console.log(`设置最大重复次数为 ${num}`);
       return;
     }
 
     // 检查所有字段映射是否为空
-    const isEmptyMapping = Object.values(currentCodeSettings).every(mapping =>
+    const isEmptyMapping = Object.values(taskFieldMappings).every(mapping =>
       !mapping || Object.keys(mapping).length === 0
     );
 
@@ -4060,38 +4191,38 @@ const TaskSystem = ({
     }
 
     // 遍历所有字段类型
-    for (const [field, mappings] of Object.entries(currentCodeSettings)) {
+    for (const [field, mappings] of Object.entries(taskFieldMappings)) {
       // 确保 mappings 存在且不为空
       if (!mappings || Object.keys(mappings).length === 0) {
-        console.log(`字段类型 ${field} 的映射为空`);
+        // console.log(`字段类型 ${field} 的映射为空`);
         continue;
       }
 
       try {
         // 遍历该字段类型的所有值和代码映射
-        for (const [value, shortcutCode] of Object.entries(mappings)) {
-          // 如果代码匹配
-          if (shortcutCode === code) {
+        for (const [value, config] of Object.entries(mappings)) {
+          // 如果代码匹配 (注意这里访问的是 config.code)
+          if (config.code === code) {
             // 根据字段类型设置相应的表单字段
             switch (field) {
               case 'categories':
                 formData.category = value;
-                console.log(`设置类别为 ${value}`);
+                // console.log(`设置类别为 ${value}`);
                 break;
               case 'domains':
                 formData.domain = value;
-                console.log(`设置领域为 ${value}`);
+                // console.log(`设置领域为 ${value}`);
                 break;
               case 'priorities':
                 formData.priority = value;
-                console.log(`设置优先级为 ${value}`);
+                // console.log(`设置优先级为 ${value}`);
                 break;
               case 'cycleTypes':
                 formData.task_type = value;
-                console.log(`设置循环周期为 ${value}`);
+                // console.log(`设置循环周期为 ${value}`);
                 break;
               default:
-                console.log(`未知字段类型: ${field}`);
+                // console.log(`未知字段类型: ${field}`);
             }
             return; // 找到匹配项后退出
           }
@@ -4101,8 +4232,82 @@ const TaskSystem = ({
       }
     }
 
-    console.log(`未找到代码 "${code}" 的映射`);
+    // console.log(`未找到代码 "${code}" 的映射`);
   };
+  // 应用字段快捷方式
+  // const applyFieldShortcut_deprecated = (formData, code) => {
+  //   // 使用传入的 codeSettings props
+  //   const currentCodeSettings = codeSettings;
+  //
+  //   // 确保 codeSettings 存在且有正确的结构
+  //   if (!currentCodeSettings) {
+  //     console.log('codeSettings 不存在');
+  //     return;
+  //   }
+  //
+  //
+  //   // 特殊处理最大重复次数，格式如 "n5" 表示最大重复次数为5
+  //   const num = parseInt(code);
+  //   if (!isNaN(num) && num > 0) {
+  //     formData.max_completions = num;
+  //     console.log(`设置最大重复次数为 ${num}`);
+  //     return;
+  //   }
+  //
+  //   // 检查所有字段映射是否为空
+  //   const isEmptyMapping = Object.values(currentCodeSettings).every(mapping =>
+  //     !mapping || Object.keys(mapping).length === 0
+  //   );
+  //
+  //   if (isEmptyMapping) {
+  //     console.log('警告：所有字段代码映射均为空，请检查设置是否正确加载');
+  //     return;
+  //   }
+  //
+  //   // 遍历所有字段类型
+  //   for (const [field, mappings] of Object.entries(currentCodeSettings)) {
+  //     // 确保 mappings 存在且不为空
+  //     if (!mappings || Object.keys(mappings).length === 0) {
+  //       console.log(`字段类型 ${field} 的映射为空`);
+  //       continue;
+  //     }
+  //
+  //     try {
+  //       // 遍历该字段类型的所有值和代码映射
+  //       for (const [value, shortcutCode] of Object.entries(mappings)) {
+  //         // 如果代码匹配
+  //         if (shortcutCode === code) {
+  //           // 根据字段类型设置相应的表单字段
+  //           switch (field) {
+  //             case 'categories':
+  //               formData.category = value;
+  //               console.log(`设置类别为 ${value}`);
+  //               break;
+  //             case 'domains':
+  //               formData.domain = value;
+  //               console.log(`设置领域为 ${value}`);
+  //               break;
+  //             case 'priorities':
+  //               formData.priority = value;
+  //               console.log(`设置优先级为 ${value}`);
+  //               break;
+  //             case 'cycleTypes':
+  //               formData.task_type = value;
+  //               console.log(`设置循环周期为 ${value}`);
+  //               break;
+  //             default:
+  //               console.log(`未知字段类型: ${field}`);
+  //           }
+  //           return; // 找到匹配项后退出
+  //         }
+  //       }
+  //     } catch (error) {
+  //       console.error(`处理字段 ${field} 时出错:`, error);
+  //     }
+  //   }
+  //
+  //   console.log(`未找到代码 "${code}" 的映射`);
+  // };
 
 
   const handleCommand = (command) => {
@@ -4119,7 +4324,7 @@ const TaskSystem = ({
     if (quickTaskInput.trim()) {
       // 检查是否是命令（以/开头）
       if (quickTaskInput.startsWith('/')) {
-        console.log('命令:', quickTaskInput);
+        // console.log('命令:', quickTaskInput);
         handleCommand(quickTaskInput.substring(1));
         setShowQuickTaskInput(false);
         setQuickTaskInput('');
@@ -4193,7 +4398,7 @@ const TaskSystem = ({
         await createTaskDirectly(quickTaskInput, {
           onShowStatus,
           addLog,
-          codeSettings,
+          // codeSettings,
           characterSettings,
           taskFieldMappings,
           stats,
@@ -4395,7 +4600,7 @@ const TaskSystem = ({
           <div className="task-hover-rewards">
             <span className="reward-item">⚔{task.exp_reward || 0}</span>
             {task.credits_reward && Object.entries(task.credits_reward).map(([type, amount]) => {
-              const creditSetting = settings?.characterSettings?.find(item => item.creditType === type);
+              const creditSetting = characterSettings?.find(item => item.creditType === type);
               const icon = creditSetting?.creditIcon || type;
 
               return (
@@ -4717,8 +4922,8 @@ const TaskSystem = ({
               flexWrap: 'wrap',
               gap: '10px'
             }}>
-              {settings?.characterSettings ? (
-                settings.characterSettings
+              {characterSettings ? (
+                characterSettings
                   .filter(setting => characterInfo.credits.hasOwnProperty(setting.creditType))
                   .map(setting => {
                     const type = setting.creditType;
@@ -4746,7 +4951,7 @@ const TaskSystem = ({
                   })
               ) : (
                 Object.entries(characterInfo.credits || {}).map(([type, value]) => {
-                  const creditSetting = settings?.characterSettings?.find(item => item.creditType === type);
+                  const creditSetting = characterSettings?.find(item => item.creditType === type);
                   const icon = creditSetting?.creditIcon || type;
 
                   return (
@@ -4839,7 +5044,7 @@ const TaskSystem = ({
             mainActionButtonSettings={mainActionButtonSettings}
             borderSettings={borderSettings}
             calendarViewSettings={calendarViewSettings}
-            codeSettings={codeSettings}
+            // codeSettings={codeSettings}
             onAddTask={onAddTask}
             onUpdateTask={onUpdateTask}
             onDeleteTask={onDeleteTask}
@@ -4852,8 +5057,6 @@ const TaskSystem = ({
             externalEditingTask={editingTask}              // 传递编辑任务对象
             setExternalEditingTask={setEditingTask}        // 传递状态更新函数
             defaultViewMode={defaultViewMode}
-            defaultBoardGroupBy={defaultBoardGroupBy}
-            fieldSettings={fieldSettings}
             creditTypes={creditTypes}
             expFormulas={expFormulas}
             taskFieldMappings={taskFieldMappings}

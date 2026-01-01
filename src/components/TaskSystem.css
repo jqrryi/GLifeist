@@ -37,7 +37,7 @@
 
 .character-info-bar {
   position: fixed;
-  top: 55px;
+  top: 60px;
   left: 0;
   width: 100%;
   display: flex;
@@ -46,7 +46,7 @@
   background-color: #f8f9fa;
   border-bottom: 1px solid #dee2e6;
   font-size: 0.3em;
-  z-index: 100;
+  z-index: 99;
 }
 
 .character-info-bar.navbar-hidden {
@@ -309,7 +309,7 @@ tasksys-settings-button:hover,
 }
 
 .modal-content {
-  background: #ffffff;
+  background: #cbeaff;
   padding: 10px;
   border-radius: 8px;
   width: 25%;
@@ -334,7 +334,7 @@ tasksys-settings-button:hover,
 }
 
 .confirmation-buttons button:last-child {
-  background-color: #28a745;
+  background-color: #027cff;
   color: black;
 }
 

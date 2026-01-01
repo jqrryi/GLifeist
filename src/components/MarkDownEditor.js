@@ -115,12 +115,12 @@ const MarkdownEditor = ({
   embedded=false,
   onShowStatus,
   autoSaveInterval=10000,
-  codeSettings = {
-    categories: {},
-    domains: {},
-    priorities: {},
-    cycleTypes: {}
-  },
+  // codeSettings = {
+  //   categories: {},
+  //   domains: {},
+  //   priorities: {},
+  //   cycleTypes: {}
+  // },
   stats={},
   characterSettings= [],
   taskFieldMappings = {},
@@ -872,7 +872,9 @@ const MarkdownEditor = ({
       try {
         // 找到匹配的段落
         const lines = content.split('\n');
-        const targetLineIndex = Math.max(0, match.paragraphIndex || 0);
+        // const targetLineIndex = Math.max(0, match.paragraphIndex || 0);
+
+        const targetLineIndex = Math.max(0, (match.lineNumber || 1));
 
         // 确保目标行索引有效
         if (targetLineIndex >= lines.length) {
@@ -1058,7 +1060,7 @@ const MarkdownEditor = ({
     const result = await createTaskDirectly(commandText, {
       onShowStatus,
       addLog,
-      codeSettings,
+      // codeSettings,
       characterSettings,
       taskFieldMappings,
       stats,
@@ -1076,99 +1078,10 @@ const MarkdownEditor = ({
     setTimeout(() => {
       setTaskCreationFeedback('');
     }, 3000);
-      // await createTaskDirectly(commandText, {
-      //   onShowStatus,
-      //   addLog,
-      //   codeSettings,
-      //   characterSettings,
-      //   taskFieldMappings,
-      //   stats,
-      //   expFormulas
-      // });
 
-    // }
   };
 
-  // 添加直接创建任务的函数
-  const createTaskDirectly_old = async (input) => {
-    try {
-      // 解析输入字符串，支持格式如: "任务名称#c1#d1#p1#t1" 或 "任务名称#c1, d1，p1 t1"
-      const parts = input.split('#');
-      const taskName = parts[0] ? parts[0].trim() : '';
 
-      // 构建任务数据
-      const taskData = {
-        name: taskName,
-        description: '',
-        task_type: '无循环',
-        max_completions: 1,
-        category: '支线任务',
-        domain: '生活',
-        priority: '不重要不紧急',
-        credits_reward: {},
-        items_reward: {},
-        start_time: new Date().toLocaleString('sv-SE'),
-        complete_time: '',
-        archived: false,
-        status: '未完成',
-        completed_count: 0,
-        total_completion_count: 0,
-        exp_reward: 0,
-        notes: ''
-      };
-
-      // 解析各字段的代码
-      if (parts.length > 1) {
-        // 将所有分隔符统一替换为空格，然后分割
-        const codesString = parts.slice(1).join(' ');
-        // 支持多种分隔符：空格、逗号、中文逗号
-        const codes = codesString.split(/[\s,，]+/)
-          .map(code => code.trim())
-          .filter(code => code.length > 0);
-
-        // 应用代码映射
-        codes.forEach(code => {
-          applyFieldCode_old(taskData, code);
-        });
-      }
-
-      // 计算积分奖励和经验值
-      const rewards = calculateTaskRewards_old(taskData);
-      taskData.credits_reward = rewards.credits_reward;
-      taskData.exp_reward = rewards.exp_reward;
-      // console.log("需要更新的taskData: ",taskData)
-
-      // 发送 API 请求创建任务
-      const response = await fetch(`${CONFIG.API_BASE_URL}/api/tasks`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(taskData)
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('任务创建成功:', result.message);
-        alert('任务创建成功');
-        addLog('笔记','任务速建', result.message)
-        // 显示通知
-        if (onShowStatus) {
-          onShowStatus(result.message || '任务创建成功');
-        }
-      } else {
-        const result = await response.json();
-        console.error('任务创建失败:', result.error);
-        addLog('笔记','速建失败', result.error)
-        if (onShowStatus) {
-          onShowStatus(result.error || '任务创建失败');
-        }
-      }
-    } catch (error) {
-      console.error('创建任务时发生错误:', error);
-      if (onShowStatus) {
-        onShowStatus('网络错误，任务创建失败');
-      }
-    }
-  };
   // 添加统一的奖励计算函数
   const calculateTaskRewards_old = (taskData) => {
     // 初始化返回值
@@ -1265,122 +1178,7 @@ const MarkdownEditor = ({
 
     return rewards;
   };
-  const applyFieldCode_old = (formData, code) => {
-      // 使用传入的 codeSettings props
-      const currentCodeSettings = codeSettings;
 
-      // 确保 codeSettings 存在且有正确的结构
-      if (!currentCodeSettings) {
-        console.log('codeSettings 不存在');
-        return;
-      }
-
-
-      // 特殊处理最大重复次数，格式如 "n5" 表示最大重复次数为5
-      const num = parseInt(code);
-      if (!isNaN(num) && num > 0) {
-        formData.max_completions = num;
-        console.log(`设置最大重复次数为 ${num}`);
-        return;
-      }
-
-      // 检查所有字段映射是否为空
-      const isEmptyMapping = Object.values(currentCodeSettings).every(mapping =>
-        !mapping || Object.keys(mapping).length === 0
-      );
-
-      if (isEmptyMapping) {
-        console.log('警告：所有字段代码映射均为空，请检查设置是否正确加载');
-        return;
-      }
-
-      // 遍历所有字段类型
-      for (const [field, mappings] of Object.entries(currentCodeSettings)) {
-        // 确保 mappings 存在且不为空
-        if (!mappings || Object.keys(mappings).length === 0) {
-          console.log(`字段类型 ${field} 的映射为空`);
-          continue;
-        }
-
-        try {
-          // 遍历该字段类型的所有值和代码映射
-          for (const [value, shortcutCode] of Object.entries(mappings)) {
-            // 如果代码匹配
-            // console.log(`检查字段值: ${value}, 代码: ${shortcutCode}`);
-            if (shortcutCode === code) {
-              // console.log(`找到匹配代码: ${code} 对应字段值: ${value}`);
-              // 根据字段类型设置对应的表单值
-              switch (field) {
-                case 'categories':
-                  console.log(`设置任务类别为 ${value}`);
-                  formData.category = value;
-                  break;
-                case 'domains':
-                  console.log(`设置任务领域为 ${value}`);
-                  formData.domain = value;
-                  break;
-                case 'priorities':
-                  console.log(`设置任务优先级为 ${value}`);
-                  formData.priority = value;
-                  break;
-                case 'cycleTypes':
-                  console.log(`设置循环周期为 ${value}`);
-                  formData.task_type = value;
-                  break;
-                  // 特殊处理循环周期类型，需要映射到正确的内部值
-                  // const cycleTypeMap = {
-                  //   '无循环': 'single',
-                  //   '日循环': 'daily',
-                  //   '周循环': 'weekly',
-                  //   '月循环': 'monthly',
-                  //   '年循环': 'yearly'
-                  // };
-                  // // 如果是显示名称，转换为内部值
-                  // const internalValue = cycleTypeMap[value] || value;
-                  // formData.task_type = internalValue;
-                  // console.log(`设置任务周期为 ${value} (内部值: ${internalValue})`);
-                  // break;
-                default:
-                  console.log(`未知字段类型: ${field}`);
-                  break;
-              }
-              return; // 找到匹配项后立即返回
-            }
-          }
-        } catch (error) {
-          console.error(`处理字段类型 ${field} 时出错:`, error);
-        }
-      }
-
-      console.log(`未找到代码 ${code} 的匹配项`);
-    };
-
-
-
-  const cleanEmptyTaskItems = (content) => {
-    return content
-      .replace(/^(\s*)-\s\[\s*[xX]?\s*\]\s*$(\n)/gm, '') // 清理空任务列表项
-      .replace(/^(\s*)-\s*$(\n)/gm, '') // 清理空无序列表项
-      // 处理任务列表项或无序列表项后跟空行再跟列表项的情况，只清除中间的空行
-      .replace(/^(\s*-\s(?:\[\s*[xX]?\s*\]\s)?[^-\s].*\n)\s*$(\n)(\s*-\s)/gm, '$1$3');
-  };
-
-  // const [settings, setSettings] = useState(null);
-  // const fetchSettings = async () => {
-  //   try {
-  //     const response = await fetch(`${CONFIG.API_BASE_URL}/api/settings`);
-  //     if (!response.ok) {
-  //       throw new Error('Failed to fetch settings');
-  //     }
-  //     const result = await response.json();
-  //     setSettings(result);
-  //   } catch (err) {
-  //     console.error('获取设置失败:', err);
-  //   }
-  // };
-  // // useEffect(() => {
-  // //   fetchSettings();
-  // // }, []);
 
 
  // 修改 handleSave 函数
@@ -2593,15 +2391,15 @@ const MarkdownEditor = ({
       return;
     }
 
-    console.log('检测到粘贴事件，检查剪贴板内容');
+    // console.log('检测到粘贴事件，检查剪贴板内容');
 
     // 检查是否有图片数据
     for (let i = 0; i < e.clipboardData.items.length; i++) {
       const item = e.clipboardData.items[i];
-      console.log('剪贴板项目类型:', item.type);
+      // console.log('剪贴板项目类型:', item.type);
 
       if (item.type.indexOf('image') !== -1) {
-        console.log('检测到图片数据，开始处理');
+        // console.log('检测到图片数据，开始处理');
         e.preventDefault();
         const file = item.getAsFile();
         if (file) {
@@ -2614,13 +2412,13 @@ const MarkdownEditor = ({
     }
 
     // 如果没有图片，让默认粘贴行为继续
-    console.log('剪贴板中没有图片数据，使用默认粘贴行为');
+    // console.log('剪贴板中没有图片数据，使用默认粘贴行为');
   };
 
   // 处理图片文件上传
   // 在 handleImageFile 函数中添加更多调试信息
   const handleImageFile = async (file) => {
-    console.log('开始处理图片文件上传',file)
+    // console.log('开始处理图片文件上传',file)
     if (!file) return;
 
     try {
@@ -2655,6 +2453,10 @@ const MarkdownEditor = ({
           const imageName = file.name ? file.name.split('.')[0] : 'img';
           const imageMarkdown = `![${imageName}](${fullImageUrl})`;
           insertTextAtCursor(imageMarkdown);
+
+          // 通知 FileExplorer 刷新文件树
+          window.dispatchEvent(new CustomEvent('refreshFileExplorer'));
+
         }
       }
     } catch (error) {
@@ -3310,8 +3112,8 @@ const MarkdownEditor = ({
               <div className="toolbar-group">
                 <button onClick={() => insertMarkdown('link')} title="链接">🔗</button>
                 <button onClick={() => setShowImageModal(true)} title="图片">🖼️</button>
-                <button onClick={() => insertMarkdown('code')} title="行内代码">{'</>'}</button>
-                <button onClick={() => insertMarkdown('codeblock')} title="代码块">{'</.>'}</button>
+                <button onClick={() => insertMarkdown('code')} title="行内代码">{'<>'}</button>
+                <button onClick={() => insertMarkdown('codeblock')} title="代码块">{'</>'}</button>
                 <button onClick={() => insertMarkdown('quote')} title="引用">❝</button>
                 <button onClick={loadAllTags} title="标签列表"><span>#</span></button>
 

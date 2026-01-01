@@ -1,9 +1,10 @@
 // src/components/ShopTab.js
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import CONFIG from '../config';
 import { Link } from 'react-router-dom';
 // import ItemManageTab from './ItemManageTab';
 import {useLogs} from "../contexts/LogContext";
+import userDataManager from "../utils/userDataManager";
 
 const ShopTab = ({
    items,
@@ -14,7 +15,8 @@ const ShopTab = ({
    creditTypes,
    categories = ["经验类", "属性类", "消耗类", "装备类", "材料类", "任务类", "未分类"],
    parallelWorldsOptions,
-   hideTopControls
+   hideTopControls,
+   characterSettings = []
 }) => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [buyCount, setBuyCount] = useState(1);
@@ -22,21 +24,32 @@ const ShopTab = ({
   const [sortDirection, setSortDirection] = useState('asc'); // 排序方向
   const [filterCategory, setFilterCategory] = useState('全部'); // 类别筛选
   // 从 localStorage 获取上次访问的页面状态，如果没有则默认为商店页面
-  const [showItemManagement, setShowItemManagement] = useState(() => {
-    const savedPage = localStorage.getItem('lastVisitedShopPage');
-    return savedPage === 'itemManagement';
-  });
+  // const [showItemManagement, setShowItemManagement] = useState(() => {
+  //   // const savedPage = localStorage.getItem('lastVisitedShopPage');
+  //   const savedPage = userDataManager.getUserData('lastVisitedShopPage');
+  //
+  //   return savedPage === 'itemManagement';
+  // });
   const { addLog } = useLogs();
   const [filterParallelWorld, setFilterParallelWorld] = useState('全部');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const filterButtonRef = useRef(null);
+
 
   // 当页面状态改变时，保存到 localStorage
-  useEffect(() => {
-    if (showItemManagement) {
-      localStorage.setItem('lastVisitedShopPage', 'itemManagement');
-    } else {
-      localStorage.setItem('lastVisitedShopPage', 'shop');
-    }
-  }, [showItemManagement]);
+  // useEffect(() => {
+  //   if (showItemManagement) {
+  //     // localStorage.setItem('lastVisitedShopPage', 'itemManagement');
+  //     userDataManager.setUserData('lastVisitedShopPage', 'itemManagement');
+  //
+  //   } else {
+  //     // localStorage.setItem('lastVisitedShopPage', 'shop');
+  //     userDataManager.setUserData('lastVisitedShopPage', 'shop');
+  //
+  //   }
+  // }, [showItemManagement]);
   // 在组件函数内部添加以下useEffect
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -44,13 +57,25 @@ const ShopTab = ({
       if (e.key === 'Escape' && selectedItem) {
         // 关闭购买弹窗
         setSelectedItem(null);
+        return;
+      }
+
+      // 检查是否按下了 F 键并且没有其他修饰键
+      if (e.key === 'f' && !e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
+        // 防止在输入框中触发
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          // 聚焦到搜索框
+          const searchInput = document.querySelector('.search-control input[type="text"]');
+          if (searchInput) {
+            searchInput.focus();
+          }
+        }
       }
     };
 
     // 添加键盘事件监听器
-    if (selectedItem) {
-      document.addEventListener('keydown', handleKeyDown);
-    }
+    document.addEventListener('keydown', handleKeyDown);
 
     // 清理函数：移除事件监听器
     return () => {
@@ -75,9 +100,52 @@ const ShopTab = ({
     return Array.from(cats);
   }, [items, categories]);
 
+  const isMobile = () => {
+    return window.innerWidth <= 768;
+  };
+
+  const clearSearch = () => {
+    setSearchTerm('');
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      clearSearch();
+      e.target.blur();
+    }
+  };
+
   // 排序和筛选后的道具列表
   const filteredAndSortedItems = useMemo(() => {
     let result = Object.entries(items);
+
+    // 搜索过滤
+    if (searchTerm) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      result = result.filter(([name, item]) => {
+        // 搜索道具名称
+        if (name.toLowerCase().includes(lowerSearchTerm)) return true;
+
+        // 搜索道具描述
+        if (item.description && item.description.toLowerCase().includes(lowerSearchTerm)) return true;
+
+        // // 搜索合成配方
+        // if (item.recipes && item.recipes.some(recipe =>
+        //   recipe.some(component =>
+        //     component.itemName.toLowerCase().includes(lowerSearchTerm)
+        //   )
+        // )) return true;
+        //
+        // // 搜索宝箱效果
+        // if (item.lootBoxes && item.lootBoxes.some(lootBox =>
+        //   lootBox.some(component =>
+        //     component.itemName.toLowerCase().includes(lowerSearchTerm)
+        //   )
+        // )) return true;
+
+        return false;
+      });
+    }
 
     // 类别筛选
     if (filterCategory !== '全部') {
@@ -131,7 +199,7 @@ const ShopTab = ({
     });
 
     return result;
-  }, [items, sortField, sortDirection, filterCategory,filterParallelWorld]);
+  }, [items, sortField, sortDirection, filterCategory,filterParallelWorld,searchTerm]);
 
   const handleBuy = async () => {
     if (!selectedItem) return;
@@ -187,7 +255,7 @@ const ShopTab = ({
 
   // 渲染道具图标
   const renderItemIcon = (item, name) => {
-    if (item.icon) {
+    if (item.icon && item.icon.trim() !== '-') {
       if (item.icon.startsWith('http') || item.icon.startsWith('data:image')) {
         // 处理图片URL
         return (
@@ -206,7 +274,7 @@ const ShopTab = ({
         return (
           <div
             className="icon-placeholder"
-            title={item.icon}
+            // title={item.icon}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -220,7 +288,7 @@ const ShopTab = ({
               fontSize: '24px'
             }}
           >
-            {name.charAt(0).toUpperCase()}
+            {item.icon}
           </div>
         );
       }
@@ -228,7 +296,7 @@ const ShopTab = ({
       // 没有图标时显示首字母
       return (
         <div className="item-icon-placeholder">
-          {name.charAt(0)}
+          {name.charAt(0).toUpperCase()}
         </div>
       );
     }
@@ -248,55 +316,147 @@ const ShopTab = ({
     }
   };
 
+  const getCreditIcon = (creditType) => {
+    const characterSetting = characterSettings.find(setting => setting.creditType === creditType);
+    return characterSetting ? characterSetting.creditIcon : '';
+  };
+
+  const renderFiltersAndSort = () => (
+    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+      <div className="filter-control">
+        <select
+          value={filterCategory}
+          title="筛选类别"
+          onChange={(e) => setFilterCategory(e.target.value)}
+        >
+          {allCategories.map(category => (
+            <option key={category} value={category}>{category}</option>
+          ))}
+        </select>
+
+        <select
+          value={filterParallelWorld}
+          title="筛选游戏世界"
+          onChange={(e) => setFilterParallelWorld(e.target.value)}
+        >
+          {allParallelWorlds.map(world => (
+            <option key={world} value={world}>{world}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="sort-control">
+        <select
+          value={sortField}
+          title="排序字段"
+          onChange={(e) => handleSort(e.target.value)}
+        >
+          <option value="name">名称</option>
+          <option value="category">类别</option>
+          <option value="price">价格</option>
+        </select>
+        <button
+          onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+          className="sort-toggle-btn"
+          title={`当前为${sortDirection === 'asc' ? '正序' : '逆序'}，点击切换`}
+        >
+          {sortDirection === 'asc' ? '↑' : '↓'}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="shop-tab">
       {/* 筛选和排序控件 */}
       <div className="shop-controls" style={{ display: hideTopControls ? 'none' : 'flex',flexDirection:'row',justifyContent:'space-between' }}>
+
         <div style={{display:'flex',flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-          <div className="filter-control">
-
-            <select
-              value={filterCategory}
-              title="筛选类别"
-              onChange={(e) => setFilterCategory(e.target.value)}
-            >
-              {allCategories.map(category => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-
-            <select
-              value={filterParallelWorld}
-              title="筛选游戏世界"
-              onChange={(e) => setFilterParallelWorld(e.target.value)}
-            >
-              {allParallelWorlds.map(world => (
-                <option key={world} value={world}>{world}</option>
-              ))}
-            </select>
+          <div className="search-control" style={{ position: 'relative', display: 'inline-block', marginRight: '10px' }}>
+            <input
+              type="text"
+              placeholder="搜索道具名称、描述..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
+              style={{
+                padding: '5px 25px 5px 5px',
+                borderRadius: '4px',
+                border: '1px solid #ccc',
+                width: isMobile() ? '120px' : '200px',
+              }}
+            />
+            {searchTerm && (
+              <button
+                onClick={clearSearch}
+                style={{
+                  position: 'absolute',
+                  right: '5px',
+                  top: '35%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  padding: '0',
+                  width: '16px',
+                  height: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#999',
+                }}
+                title="清除搜索"
+              >
+                ×
+              </button>
+            )}
           </div>
 
-          <div className="sort-control">
-            <select
-              value={sortField}
-              title="排序字段"
-              onChange={(e) => handleSort(e.target.value)}
-            >
-              <option value="name">名称</option>
-              <option value="category">类别</option>
-              <option value="price">价格</option>
-            </select>
-            {/* 添加正逆序切换按钮 */}
-            <button
-              onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-              className="sort-toggle-btn"
-              title={`当前为${sortDirection === 'asc' ? '正序' : '逆序'}，点击切换`}
-            >
-              {sortDirection === 'asc' ? '↑' : '↓'}
-            </button>
-          </div>
+          {isMobile() ? (
+            <>
+              <button
+                ref={filterButtonRef}
+                onClick={() => setShowFilters(!showFilters)}
+                style={{
+                  color: 'black',
+                  background: 'none',
+                  borderRadius: '4px',
+                  padding: '5px 5px',
+                  cursor: 'pointer',
+                  marginRight: '5px'
+                }}
+                title="筛选和排序"
+              >
+                ☰
+              </button>
+              {showFilters && (
+                <div
+                  className="filters-sort-popup"
+                  style={{
+                    position: 'absolute',
+                    top: filterButtonRef.current ?
+                      filterButtonRef.current.offsetTop + filterButtonRef.current.offsetHeight : '50px',
+                    left: '10px',
+                    background: 'white',
+                    padding: '1px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    zIndex: 100,
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  {renderFiltersAndSort()}
+                </div>
+              )}
+            </>
+          ) : (
+            renderFiltersAndSort()
+          )}
         </div>
+
         <div className="other-control">
           <button onClick={onBuyItem} title="刷新">⟳</button>
         </div>
@@ -307,14 +467,20 @@ const ShopTab = ({
       <div className="item-grid">
         {filteredAndSortedItems.map(([name, info]) => {
           const priceText = Object.entries(info.price)
-            .map(([ctype, price]) => `${ctype}${price.toFixed(1)}`)
+            .map(([ctype, price]) => {
+              const icon = getCreditIcon(ctype);
+              return `${ctype}${icon}${price.toFixed(1)}`;
+            })
             .join(', ');
 
           return (
             <div
               key={name}
               className="item-card"
-              onClick={() => setSelectedItem(name)}
+              onClick={() => {
+                setSelectedItem(name);
+                setBuyCount(1);
+              }}
               title={info.description || '暂无描述'} // 添加描述信息提示
             >
               <div className="item-icon">
@@ -332,16 +498,19 @@ const ShopTab = ({
 
       {selectedItem && (
         <div className="buy-modal">
-          <h4>购买{selectedItem}</h4>
-          <p>道具名称: {selectedItem}</p>
-          <p>兑换价格: {
+          <h4 style={{marginTop:'40px'}}>购买{selectedItem}</h4>
+          {/*<p>道具名称: {selectedItem}</p>*/}
+          <p>{
             Object.entries(items[selectedItem].price)
-              .map(([ctype, price]) => `${ctype}${price.toFixed(1)}`)
+              .map(([ctype, price]) => `${ctype}${getCreditIcon(ctype)}${price.toFixed(1)}`)
               .join(', ')
           }</p>
 
+          <div className="item-stock">
+            <label style={{ marginRight: '10px' }}>已拥有 {backpack[selectedItem] || '0'} </label>
+          </div>
+
           <div>
-            <label>数目(1-{calculateMaxCount(items[selectedItem])}):</label>
             <input
               type="number"
               min="1"
@@ -349,9 +518,10 @@ const ShopTab = ({
               value={buyCount}
               onChange={(e) => setBuyCount(e.target.value)}
             />
+            <label>/{calculateMaxCount(items[selectedItem])}</label>
           </div>
 
-          <button onClick={handleBuy}>确认</button>
+          <button onClick={handleBuy} style={{marginTop:'30px'}}>确认</button>
           <button onClick={() => setSelectedItem(null)}>取消</button>
         </div>
       )}
