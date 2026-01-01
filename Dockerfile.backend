@@ -1,7 +1,5 @@
 # 使用 Python 官方镜像作为基础镜像
-
-FROM docker.m.daocloud.io/library/python:3.11-slim
-
+FROM python:3.11-slim
 
 # 设置工作目录
 WORKDIR /app
@@ -13,7 +11,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制后端相关文件
 COPY app.py .
 COPY users/ ./users/
-# COPY .env . 
 
 # 暴露 Flask 默认端口
 EXPOSE 5000
@@ -26,9 +23,4 @@ ENV FLASK_DEBUG=False
 # 启动应用（使用 Gunicorn 作为生产 WSGI 服务器）
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "app:app"]
 
-# 创建非 root 用户以提高安全性
-#RUN useradd --create-home --shell /bin/bash app && chown -R app:app /app
-#USER app
 
-# 启动 Flask 应用
-# CMD ["flask", "run", "--host=0.0.0.0"]
