@@ -2594,6 +2594,8 @@ th:hover {
 /* 配方模态框中的样式 */
 .loot-box-items-list,
 .recipe-items-list {
+  display:flex;
+  flex-direction: row;
   text-align: left;
   max-height: 150px;
   overflow-y: auto;
