@@ -3452,10 +3452,10 @@ const ItemManageTab = ({
           <div className="modal-content recipe-modal" style={{ width: '75%' }}>
             <h4>{editingRecipeIndex !== null ? `编辑配方 ${editingRecipeIndex + 1}` : '添加合成配方'}</h4>
 
-            <div className="form-group">
-              <label>添加道具：</label>
-              <div className="item-search-wrapper">
-                <div style={{  position: 'relative' }}>
+            <div className="form-group" style={{ display: 'flex', flextDirection: 'row'}}>
+              <label style={{display:'flex', alignItems:'center', width: '10%'}}>道具：</label>
+              <div className="item-search-wrapper" style={{ display: 'flex', flextDirection: 'row', width: '100%'}}>
+                <div style={{ position: 'relative',display: 'flex', flextDirection: 'row', width: '100%'  }}>
                   <input
                     type="text"
                     value={recipeFormData.currentItem || itemSearch}
@@ -3502,29 +3502,33 @@ const ItemManageTab = ({
             </div>
 
             <div className="form-group">
-              <label>数量：</label>
-              <div className="recipe-item-input">
-                <input
-                  type="number"
-                  min="1"
-                  value={recipeFormData.itemCount}
-                  onChange={(e) => setRecipeFormData({...recipeFormData, itemCount: e.target.value})}
-                  className="form-control"
-                />
+              <div style={{ display: 'flex', flextDirection: 'row',width: '100%'}}>
+                <label style={{display:'flex', alignItems:'center', width: '10%'}}>数量：</label>
+                <div className="recipe-item-input" style={{ display: 'flex', flextDirection: 'row', width: '100%'}}>
+                  <input
+                    type="number"
+                    min="1"
+                    value={recipeFormData.itemCount}
+                    onChange={(e) => setRecipeFormData({...recipeFormData, itemCount: e.target.value})}
+                    className="form-control"
 
+                  />
+                </div>
               </div>
-                <button
-                  onClick={handleAddRecipeItem}
-                  className="btn btn-primary"
-                >
-                  添加
-                </button>
-                <button
-                  onClick={resetRecipeForm}
-                  className="btn btn-primary"
-                >
-                  重置
-                </button>
+
+              <button
+                onClick={handleAddRecipeItem}
+                className="btn btn-primary"
+              >
+                添加
+              </button>
+
+              <button
+                onClick={resetRecipeForm}
+                className="btn btn-primary"
+              >
+                重置
+              </button>
             </div>
 
             {/* 显示已添加的道具 */}
@@ -3598,7 +3602,7 @@ const ItemManageTab = ({
 
             <div>
               <button onClick={handleSaveRecipe} className="btn btn-success">
-                保存
+                添加配方
               </button>
               <button
                 onClick={() => {
@@ -3626,10 +3630,10 @@ const ItemManageTab = ({
           <div className="modal-content loot-box-modal" style={{ width: '75%' }}>
             <h4>{editingLootBoxIndex !== null ? `编辑开箱效果 ${editingLootBoxIndex + 1}` : '添加开箱效果'}</h4>
 
-            <div className="form-group">
-              <label>添加道具：</label>
-              <div className="item-search-wrapper">
-                <div style={{ position: 'relative' }}>
+            <div className="form-group" style={{ display: 'flex', flextDirection: 'row'}}>
+              <label style={{display:'flex', alignItems:'center', width: '10%'}}>道具：</label>
+              <div className="item-search-wrapper" style={{ display: 'flex', flextDirection: 'row', width: '90%'}}>
+                <div style={{ position: 'relative',display: 'flex', flextDirection: 'row', width: '100%'  }}>
                   <input
                     type="text"
                     value={lootBoxFormData.currentItem || lootBoxSearch}
@@ -3676,9 +3680,9 @@ const ItemManageTab = ({
               </div>
             </div>
 
-            <div className="form-group">
-              <label>数量：</label>
-              <div className="loot-box-item-input">
+            <div className="form-group" style={{ display: 'flex', flextDirection: 'row'}}>
+              <label style={{display:'flex', alignItems:'center', width: '10%'}}>数量：</label>
+              <div className="loot-box-item-input" style={{ display: 'flex', flextDirection: 'row', width: '90%'}}>
                 <input
                   type="number"
                   min="1"
@@ -3690,18 +3694,21 @@ const ItemManageTab = ({
             </div>
 
             <div className="form-group">
-              <label>爆率 (0-1)：</label>
-              <div className="loot-box-rate-input">
-                <input
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={lootBoxFormData.dropRate}
-                  onChange={(e) => setLootBoxFormData({...lootBoxFormData, dropRate: e.target.value})}
-                  className="form-control"
-                />
-                <span>({(lootBoxFormData.dropRate * 100).toFixed(3)}%)</span>
+              <div style={{ display: 'flex', flextDirection: 'row'}}>
+                <label title="取值0-1" style={{display:'flex', alignItems:'center', width: '10%'}}>爆率：</label>
+                <div style={{ display: 'flex', flextDirection: 'row', width: '90%'}}>
+                  <input
+                    type="number"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={lootBoxFormData.dropRate}
+                    onChange={(e) => setLootBoxFormData({...lootBoxFormData, dropRate: e.target.value})}
+                    className="form-control"
+                  />
+                  <span style={{display:'flex', alignItems:'center'}}>({(lootBoxFormData.dropRate * 100).toFixed(3)}%)</span>
+                </div>
+
               </div>
 
               <button
@@ -3723,71 +3730,73 @@ const ItemManageTab = ({
             <div className="form-group">
               <h5>开箱道具列表:</h5>
               {lootBoxFormData.items.length > 0 ? (
-                <div className="loot-box-items-list">
-                  {lootBoxFormData.items.map((item, index) => (
-                    <div key={index} className="loot-box-item-row">
-                      <div style={{display: 'flex', flexDirection:'column', alignItems:'center'}}>
-                        <div style={{display: 'flex', alignItems:'center', flex:1}}>
-                          <span
-                              title={`${item.itemName} × ${item.count}`}
-                              style={{
-                                height: '20%',
-                                padding: '0 1px',
-                                // backgroundColor: '#027cff',
-                                // display: 'block',
-                                // width: '100%',
-                              }}
-                          >
-                            {renderIcon(items[item.itemName].icon, item.itemName, 36)}
-                          </span>
-                          <div>
-                            <button
-                              onClick={() => fillLootBoxFormWithItem(item)}
-                              className="btn btn-secondary btn-sm"
-                              title="填充到表单"
-                              style={{
-                                height: '30%',
-                                padding: '0 1px',
-                                marginBottom: '1px',
-                                // color: 'black',
-                                backgroundColor: '#027cff',
-                                display: 'block',
-                                width: '100%',
-                              }}
+                <div>
+                  <div className="loot-box-items-list">
+                    {lootBoxFormData.items.map((item, index) => (
+                      <div key={index} className="loot-box-item-row">
+                        <div style={{display: 'flex', flexDirection:'column', alignItems:'center'}}>
+                          <div style={{display: 'flex', alignItems:'center', flex:1}}>
+                            <span
+                                title={`${item.itemName} × ${item.count}`}
+                                style={{
+                                  height: '20%',
+                                  padding: '0 1px',
+                                  // backgroundColor: '#027cff',
+                                  // display: 'block',
+                                  // width: '100%',
+                                }}
                             >
-                              +
-                            </button>
-                            <button
-                              onClick={() => removeLootBoxItem(index)}
-                              className="btn btn-danger btn-sm"
-                              style={{
-                                height: '30%',
-                                padding: '0 1px',
-                                // color: 'black',
-                                backgroundColor: '#dc3545',
-                                display: 'block',
-                                width: '100%',
-                              }}
-                            >
-                              -
-                            </button>
+                              {renderIcon(items[item.itemName].icon, item.itemName, 36)}
+                            </span>
+                            <div>
+                              <button
+                                onClick={() => fillLootBoxFormWithItem(item)}
+                                className="btn btn-secondary btn-sm"
+                                title="填充到表单"
+                                style={{
+                                  height: '30%',
+                                  padding: '0 1px',
+                                  marginBottom: '1px',
+                                  // color: 'black',
+                                  backgroundColor: '#027cff',
+                                  display: 'block',
+                                  width: '100%',
+                                }}
+                              >
+                                +
+                              </button>
+                              <button
+                                onClick={() => removeLootBoxItem(index)}
+                                className="btn btn-danger btn-sm"
+                                style={{
+                                  height: '30%',
+                                  padding: '0 1px',
+                                  // color: 'black',
+                                  backgroundColor: '#dc3545',
+                                  display: 'block',
+                                  width: '100%',
+                                }}
+                              >
+                                -
+                              </button>
+                            </div>
+
+
+
+
                           </div>
 
-
-
+                          <div style={{marginRight:'15px', marginBottom:'15px',fontSize:'10px'}}>
+                            {item.itemName}
+                            <br />
+                            ×{item.count} ({(item.dropRate * 100).toFixed(3)}%)
+                          </div>
 
                         </div>
-
-                        <div style={{marginRight:'15px', marginBottom:'15px',fontSize:'10px'}}>
-                          {item.itemName}
-                          <br />
-                          ×{item.count} ({(item.dropRate * 100).toFixed(3)}%)
-                        </div>
-
                       </div>
-                    </div>
-                  ))}
-                  <div className="total-rate">
+                    ))}
+                  </div>
+                  <div className="total-rate" style={{fontSize:'12px'}}>
                     总爆率: {(lootBoxFormData.items.reduce((sum, item) => sum + parseFloat(item.dropRate || 0), 0) * 100).toFixed(3)}%
                   </div>
                 </div>
@@ -3798,7 +3807,7 @@ const ItemManageTab = ({
 
             <div>
               <button onClick={handleSaveLootBox} className="btn btn-success">
-                保存开箱效果
+                添加开箱效果
               </button>
               <button
                 onClick={() => {
