@@ -156,7 +156,7 @@ const LoginForm = ({ onLoginSuccess }) => {
               style={{ marginRight: '8px' }}
             />
             <label htmlFor="rememberMe" style={{ margin: 0, cursor: 'pointer', alignItems: 'left', textAlign: 'left' }}>
-              14天内免登录
+              下次免登录
             </label>
           </div>
         )}

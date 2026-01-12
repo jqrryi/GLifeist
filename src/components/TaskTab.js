@@ -155,7 +155,7 @@ const TaskTab = ({
   });
   // 使用传入的 actionButtonSettings
   const [currentActionButtonSettings, setCurrentActionButtonSettings] = useState(
-    propActionButtonSettings || {
+    settings.actionButtonSettings || {
       edit: 'visible',
       complete: 'visible',
       copy: 'hidden',
@@ -166,7 +166,8 @@ const TaskTab = ({
   // 添加本地状态来存储 codeSettings
   // const [localCodeSettings, setLocalCodeSettings] = useState(codeSettings);
   // 支持按钮收纳
-  const [mainActionButtonSettings, setMainActionButtonSettings] = useState({
+  const [mainActionButtonSettings, setMainActionButtonSettings] = useState(
+    settings.mainActionButtonSettings || {
     addTask: 'visible',
     batchDelete: 'visible',
     batchArchive: 'visible'
@@ -358,15 +359,15 @@ const TaskTab = ({
   }, [formData.domain, formData.category, formData.priority, editingTask, showAddForm, settings]);
 
 
-  // 添加 useEffect 来同步 prop 的变化
-  useEffect(() => {
-    if (propMainActionButtonSettings && Object.keys(propMainActionButtonSettings).length > 0) {
-      setMainActionButtonSettings(prev => ({
-        ...prev,
-        ...propMainActionButtonSettings
-      }));
-    }
-  }, [propMainActionButtonSettings]);
+  // // 添加 useEffect 来同步 prop 的变化
+  // useEffect(() => {
+  //   if (propMainActionButtonSettings && Object.keys(propMainActionButtonSettings).length > 0) {
+  //     setMainActionButtonSettings(prev => ({
+  //       ...prev,
+  //       ...propMainActionButtonSettings
+  //     }));
+  //   }
+  // }, [propMainActionButtonSettings]);
 
   // 在 useEffect 中添加视图模式变化的处理
   useEffect(() => {
@@ -1157,8 +1158,9 @@ const TaskTab = ({
       // const savedSettings = localStorage.getItem('taskFieldSettings');
       const savedSettings = userDataManager.getUserData('taskFieldSettings');
       if (savedSettings) {
-        const parsedSettings = JSON.parse(savedSettings);
-        setFieldSettings(parsedSettings);
+        // const parsedSettings = JSON.parse(savedSettings);
+        // setFieldSettings(parsedSettings);
+        setFieldSettings(savedSettings);
       }
     } catch (e) {
       console.warn('无法从本地存储加载字段设置:', e);
@@ -3464,7 +3466,7 @@ const TaskTab = ({
           <button
             onClick={onBatchDelete}
             disabled={selectedTaskCount === 0}
-            title="批量删除"
+            title="删除"
           >
             ❌ ({selectedTaskCount})
           </button>
@@ -3492,19 +3494,27 @@ const TaskTab = ({
           <button onClick={onExportTasks} title="导出任务(CSV)">📤</button>
         )}
 
-        <div>
-          <button className="tasksys-settings-button" onClick={() => setIsSettingsModalOpen(!isSettingsModalOpen)}>
-            ⚙️️
-          </button>
-          <SettingsModal
-            isOpen={isSettingsModalOpen}
-            title="任务系统设置"
-            onClose={() => setIsSettingsModalOpen(false)}
-            targetGroup={['general', 'action-buttons', 'board-view', 'calendar-view', 'task-field-mapping','border',  ]}
-            settings={settings}
-            onUpdateSettings={onUpdateTask}
-          />
-        </div>
+        {/*<div>*/}
+        {/*  <button className="tasksys-settings-button" onClick={() => setIsSettingsModalOpen(!isSettingsModalOpen)}>*/}
+        {/*    ⚙️️*/}
+        {/*  </button>*/}
+        {/*  <SettingsModal*/}
+        {/*    isOpen={isSettingsModalOpen}*/}
+        {/*    title="任务系统设置"*/}
+        {/*    onClose={() => setIsSettingsModalOpen(false)}*/}
+        {/*    targetGroup={['general', 'action-buttons', 'board-view', 'calendar-view', 'task-field-mapping','border',  ]}*/}
+        {/*    settings={settings}*/}
+        {/*    onUpdateSettings={onUpdateTask}*/}
+        {/*  />*/}
+        {/*</div>*/}
+        <SettingsModal
+          isOpen={isSettingsModalOpen}
+          title="任务模块设置"
+          onClose={() => setIsSettingsModalOpen(false)}
+          targetGroup={['general', 'action-buttons', 'board-view', 'calendar-view', 'task-field-mapping','border',  ]}
+          settings={settings}
+          onUpdateSettings={onUpdateTask}
+        />
 
 
         {!allButtonsVisible && (
@@ -3513,17 +3523,17 @@ const TaskTab = ({
             {isOpen && (
               <div className="more-actions-dropdown">
                 {buttonSettings.quickAddTask === 'hidden' && (
-                  <button onClick={handleQuickAddTask}>快速新增</button>
+                  <button onClick={handleQuickAddTask}>⚡ 快速新增</button>
                 )}
                 {buttonSettings.addTask === 'hidden' && (
-                  <button onClick={onAddTask}>新增任务</button>
+                  <button onClick={onAddTask}>✚ 新增任务</button>
                 )}
                 {buttonSettings.batchDelete === 'hidden' && (
                   <button
                     onClick={onBatchDelete}
                     disabled={selectedTaskCount === 0}
                   >
-                    批量删除 ({selectedTaskCount})
+                    ❌ 删除 ({selectedTaskCount})
                   </button>
                 )}
                 {/*{buttonSettings.batchArchive === 'hidden' && (*/}
@@ -3533,12 +3543,18 @@ const TaskTab = ({
                 {/*  <button onClick={onRefreshCycles}>刷新循环任务</button>*/}
                 {/*)}*/}
                 {buttonSettings.importTasks === 'hidden' && (
-                  <button onClick={onImportTasks}>导入(CSV)</button>
+                  <button onClick={onImportTasks}>📥导入(CSV)</button>
                 )}
                 {buttonSettings.exportTasks === 'hidden' && (
-                  <button onClick={onExportTasks}>导出(CSV)</button>
+                  <button onClick={onExportTasks}>📤导出(CSV)</button>
                 )}
+                <div>
+                  <button className="tasksys-settings-button" onClick={() => setIsSettingsModalOpen(!isSettingsModalOpen)}>
+                    ⚙️️任务设置
 
+                  </button>
+
+                </div>
 
               </div>
             )}
@@ -3640,12 +3656,12 @@ const TaskTab = ({
             <button onClick={toggleDropdown} title="更多操作">...</button>
             {isOpen && (
               <div className="more-actions-dropdown">
-                <button onClick={handleViewDetails}>查看</button>
-                <button onClick={handleEdit}>编辑</button>
-                <button onClick={() => onComplete(taskId)}>完成</button>
-                <button onClick={handleCopy}>复制</button>
-                <button onClick={handleDelete}>删除</button>
-                <button onClick={() => onArchive(taskId)}>归档</button>
+                <button onClick={handleViewDetails}>📄 查看</button>
+                <button onClick={handleEdit}>🖍 编辑</button>
+                <button onClick={() => onComplete(taskId)}>✔ 完成</button>
+                <button onClick={handleCopy}>🗐 复制</button>
+                <button onClick={handleDelete}>❌ 删除</button>
+                <button onClick={() => onArchive(taskId)}>🗃️ 归档</button>
               </div>
             )}
           </div>
@@ -3657,9 +3673,9 @@ const TaskTab = ({
             <button onClick={handleViewDetails} title="查看">📄</button>
             <button onClick={handleEdit} title="编辑">🖍</button>
             <button onClick={() => onComplete(taskId)} title="完成">✔</button>
-            <button onClick={handleCopy} title="复制">✂</button>
-            <button onClick={handleDelete} className="delete-button" title="删除">✘</button>
-            <button onClick={() => onArchive(taskId)} title="归档">🔒</button>
+            <button onClick={handleCopy} title="复制">🗐</button>
+            <button onClick={handleDelete} className="delete-button" title="删除">❌</button>
+            <button onClick={() => onArchive(taskId)} title="归档">🗃️</button>
         </div>
       )
     }
@@ -3683,13 +3699,13 @@ const TaskTab = ({
           <button className="action-button-group-btn" onClick={() => onComplete(taskId)} title="完成">✔</button>
         )}
         {currentActionButtonSettings.copy === 'visible' && (
-          <button className="action-button-group-btn" onClick={() => onCopy(task)} title="复制">✂</button>
+          <button className="action-button-group-btn" onClick={() => onCopy(task)} title="复制">🗐</button>
         )}
         {currentActionButtonSettings.delete === 'visible' && (
-          <button className="action-button-group-btn" onClick={handleDelete} className="delete-button" title="删除">✘</button>
+          <button className="action-button-group-btn" onClick={handleDelete} className="delete-button" title="删除">❌</button>
         )}
         {currentActionButtonSettings.archive === 'visible' && (
-          <button className="action-button-group-btn" onClick={() => onArchive(taskId)} title="归档">🔒</button>
+          <button className="action-button-group-btn" onClick={() => onArchive(taskId)} title="归档">🗃️</button>
         )}
 
         {!allButtonsVisible && (
@@ -3698,22 +3714,22 @@ const TaskTab = ({
             {isOpen && (
               <div className="more-actions-dropdown">
                 {currentActionButtonSettings.view === 'hidden' && (
-                  <button onClick={handleViewDetails}>查看</button>
+                  <button onClick={handleViewDetails}>📄 查看</button>
                 )}
                 {currentActionButtonSettings.edit === 'hidden' && (
-                  <button onClick={() => onEdit(taskId)}>编辑</button>
+                  <button onClick={() => onEdit(taskId)}>🖍 编辑</button>
                 )}
                 {currentActionButtonSettings.complete === 'hidden' && (
-                  <button onClick={() => onComplete(taskId)}>完成</button>
+                  <button onClick={() => onComplete(taskId)}>✔ 完成</button>
                 )}
                 {currentActionButtonSettings.copy === 'hidden' && (
-                  <button onClick={() => onCopy(task)}>复制</button>
+                  <button onClick={() => onCopy(task)}>🗐 复制</button>
                 )}
                 {currentActionButtonSettings.delete === 'hidden' && (
-                  <button onClick={handleDelete}>删除</button>
+                  <button onClick={handleDelete}>❌ 删除</button>
                 )}
                 {currentActionButtonSettings.archive === 'hidden' && (
-                  <button onClick={() => onArchive(taskId)}>归档</button>
+                  <button onClick={() => onArchive(taskId)}>🗃️ 归档</button>
                 )}
               </div>
             )}
@@ -9798,7 +9814,7 @@ const TaskTab = ({
             value={filterArchived}
             onChange={(e) => setFilterArchived(e.target.value)}
           >
-            <option value="全部">归档</option>
+            <option value="全部">全部</option>
             <option value="是">已归档</option>
             <option value="否">未归档</option>
           </select>

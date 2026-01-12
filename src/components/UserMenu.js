@@ -47,6 +47,12 @@ const UserMenu = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
+  // 添加新的状态变量
+  const [showUserDataManagement, setShowUserDataManagement] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [restoreResult, setRestoreResult] = useState(null);
 
   // 在组件顶部添加预设emoji列表
   const PRESET_EMOJIS = [
@@ -62,15 +68,27 @@ const UserMenu = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [inputPage, setInputPage] = useState(1);
   const [logsPerPage, setLogsPerPage] = useState(5);
-
   // 在 useEffect 或其他合适位置添加计算总页数的逻辑
   const totalPages = Math.ceil(users.length / logsPerPage);
+
+  const [currentUserDataPage, setCurrentUserDataPage] = useState(1);
+  const [userDataInputPage, setUserDataInputPage] = useState(1);
+  const [userDataLogsPerPage, setUserDataLogsPerPage] = useState(20);
+  const totalUserDataPages = Math.ceil(users.length / userDataLogsPerPage);
+  const [selectAllCurrentPage, setSelectAllCurrentPage] = useState(false);
+  const [selectAllUsers, setSelectAllUsers] = useState(false);
 
   // 添加 paginate 函数
   const paginate = (pageNumber) => {
     if (pageNumber >= 1 && pageNumber <= totalPages) {
       setCurrentPage(pageNumber);
       setInputPage(pageNumber);
+    }
+  };
+  const userDataPaginate = (pageNumber) => {
+    if (pageNumber >= 1 && pageNumber <= totalUserDataPages) {
+      setCurrentUserDataPage(pageNumber);
+      setUserDataInputPage(pageNumber);
     }
   };
 
@@ -110,6 +128,7 @@ const UserMenu = ({
         setShowRegisterForm(false);
         setShowProfile(false);
         setShowCharacterEdit(false); // 关闭角色编辑弹窗
+        setShowUserManagement(false);
       }
     };
 
@@ -169,6 +188,8 @@ const UserMenu = ({
           // 登录/注册表单
           setShowLoginForm(false);
           setShowRegisterForm(false);
+        } else if (showUserDataManagement) {
+          setShowUserDataManagement(false);
         }
       }
     };
@@ -177,7 +198,7 @@ const UserMenu = ({
     const hasOpenModal = showMenu || showLoginForm || showRegisterForm ||
                         showProfile || showCharacterEdit || showUserManagement ||
                         showEmojiPicker || showChangePassword || showCreateUserForm ||
-                        editingUserId;
+                        editingUserId || showUserDataManagement;
 
     if (hasOpenModal) {
       document.addEventListener('keydown', handleEscKey);
@@ -196,7 +217,8 @@ const UserMenu = ({
     showEmojiPicker,
     showChangePassword,
     showCreateUserForm,
-    editingUserId
+    editingUserId,
+    showUserDataManagement
   ]);
 
   // 修改现有的点击外部区域关闭菜单的 useEffect
@@ -521,6 +543,194 @@ const UserMenu = ({
     }
   };
 
+
+
+  // 添加全选当前页功能
+  const handleSelectAllCurrentPage = () => {
+    const startIdx = (currentUserDataPage - 1) * userDataLogsPerPage;
+    const endIdx = currentUserDataPage * userDataLogsPerPage;
+    const currentPageUsers = users.slice(startIdx, endIdx);
+
+    if (selectAllCurrentPage) {
+      // 取消选择当前页用户
+      setSelectedUsers(prev => prev.filter(user => !currentPageUsers.some(u => u.username === user)));
+    } else {
+      // 选择当前页所有用户（去重）
+      const newSelected = [...new Set([...selectedUsers, ...currentPageUsers.map(u => u.username)])];
+      setSelectedUsers(newSelected);
+
+    }
+    setSelectAllCurrentPage(!selectAllCurrentPage);
+    const allUsersSelected = users.length > 0 && users.every(u => selectedUsers.includes(u.username));
+    setSelectAllUsers(!allUsersSelected);
+  };
+
+  // 添加全选所有功能
+  const handleSelectAllUsers = () => {
+    if (selectAllUsers) {
+      // 取消选择所有用户
+      setSelectedUsers([]);
+    } else {
+      // 选择所有用户
+      setSelectedUsers(users.map(user => user.username));
+    }
+    setSelectAllUsers(!selectAllUsers);
+    setSelectAllCurrentPage(!selectAllUsers); // 同步全选当前页状态
+  };
+
+  // 更新用户选择处理函数
+  // const handleUserSelect = (username) => {
+  //   if (selectedUsers.includes(username)) {
+  //     const newSelected = selectedUsers.filter(user => user !== username);
+  //     setSelectedUsers(newSelected);
+  //
+  //     // 检查当前页是否全部被取消选择
+  //     const startIdx = (currentUserDataPage - 1) * userDataLogsPerPage;
+  //     const endIdx = currentUserDataPage * userDataLogsPerPage;
+  //     const currentPageUsers = users.slice(startIdx, endIdx);
+  //
+  //     const allCurrentPageSelected = currentPageUsers.every(u => newSelected.includes(u.username));
+  //     setSelectAllCurrentPage(allCurrentPageSelected);
+  //   } else {
+  //     const newSelected = [...selectedUsers, username];
+  //     setSelectedUsers(newSelected);
+  //   }
+  //
+  //   // 检查是否所有用户都被选择
+  //   const allUsersSelected = users.length > 0 && users.every(u => selectedUsers.includes(u.username));
+  //   setSelectAllUsers(allUsersSelected);
+  // };
+
+  const handleUserSelect = (username) => {
+    let newSelected;
+    if (selectedUsers.includes(username)) {
+      // 取消选择该用户
+      newSelected = selectedUsers.filter(user => user !== username);
+      setSelectedUsers(newSelected);
+
+      // 由于取消了一个选择，全选状态应该变为false
+      setSelectAllUsers(false);
+    } else {
+      // 选择该用户
+      newSelected = [...selectedUsers, username];
+      setSelectedUsers(newSelected);
+
+      // 检查是否所有用户都已被选择
+      const allUsersSelected = users.length > 0 && users.every(u => newSelected.includes(u.username));
+      setSelectAllUsers(allUsersSelected);
+    }
+
+    // 检查当前页的全选状态 - 使用更新后的 newSelected 状态
+    const startIdx = (currentUserDataPage - 1) * userDataLogsPerPage;
+    const endIdx = currentUserDataPage * userDataLogsPerPage;
+    const currentPageUsers = users.slice(startIdx, endIdx);
+    const allCurrentPageSelected = currentPageUsers.length > 0 &&
+                                   currentPageUsers.every(u => newSelected.includes(u.username));
+    setSelectAllCurrentPage(allCurrentPageSelected);
+  };
+
+
+
+
+
+  // 修改备份用户数据函数
+  const handleBackup = async () => {
+      if (!currentUser && selectedUsers.length === 0) {
+          if (onShowStatus) onShowStatus('请选择要备份的用户');
+          return;
+      }
+
+      const usersToBackup = selectedUsers.length > 0 ? selectedUsers : [currentUser];
+      setBackupLoading(true);
+
+      try {
+          const response = await AuthManager.authenticatedFetch(`${CONFIG.API_BASE_URL}/api/user/backup`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                users: usersToBackup,
+                current_user: currentUser,
+              })
+          });
+
+          if (response.ok) {
+              // 创建 Blob URL 并触发下载
+              const blob = await response.blob();
+              const url = window.URL.createObjectURL(blob);
+
+              // 创建下载链接
+              const a = document.createElement('a');
+              a.href = url;
+
+              // 使用当前日期和时间作为文件名的一部分
+              const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+              const time = new Date().toTimeString().slice(0, 8).replace(/:/g, '');
+
+              a.download = userPermissions.includes('admin') ? `backup_admin_${timestamp}_${time}.zip`:`backup_${currentUser}_${timestamp}_${time}.zip`;
+
+              document.body.appendChild(a);
+              a.click();
+
+              // 清理
+              document.body.removeChild(a);
+              window.URL.revokeObjectURL(url);
+
+              // 提示用户检查下载位置
+              if (onShowStatus) onShowStatus('备份成功，文件已开始下载。请检查浏览器下载文件夹。');
+          } else {
+              const errorData = await response.json();
+              throw new Error(errorData.error || '备份失败');
+          }
+      } catch (error) {
+          console.error('备份失败:', error);
+          if (onShowStatus) onShowStatus('备份失败: ' + error.message);
+      } finally {
+          setBackupLoading(false);
+      }
+  };
+
+  // 修改还原用户数据函数
+  const handleRestore = async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      setRestoreLoading(true);
+      setRestoreResult(null);
+
+      const formData = new FormData();
+      formData.append('backup', file);
+      formData.append('current_user', currentUser);
+
+      try {
+          const response = await AuthManager.authenticatedFetch(`${CONFIG.API_BASE_URL}/api/user/restore`, {
+              method: 'POST',
+              body: formData
+          });
+
+          if (response.ok) {
+              const result = await response.json();
+              setRestoreResult(result);
+              if (onShowStatus) onShowStatus('还原成功');
+              // 刷新当前用户数据
+              if (onUpdate) onUpdate();
+          } else {
+              const errorData = await response.json();
+              throw new Error(errorData.error || '还原失败');
+              alert(errorData.error || '还原失败');
+              if (onUpdate) onUpdate();
+          }
+      } catch (error) {
+          console.error('还原失败:', error);
+          if (onShowStatus) onShowStatus('还原失败: ' + error.message);
+          alert('还原失败: ' + error.message);
+          if (onUpdate) onUpdate();
+      } finally {
+          setRestoreLoading(false);
+      }
+  };
+
+
+
   return (
     <div className="user-menu-container" ref={menuRef}>
       {/* 用户菜单按钮 */}
@@ -612,6 +822,27 @@ const UserMenu = ({
                   用户管理
                 </button>
               )}
+
+
+
+              {/*// 在主菜单中添加用户数据管理项（修改版）*/}
+              <button onClick={() => {
+                setShowMenu(false);
+                setShowUserDataManagement(true);
+                // 普通用户不需要获取所有用户列表
+                if (userPermissions.includes('admin')) {
+                  fetchUsers(); // 管理员获取用户列表
+                } else {
+                  // 普通用户设置当前用户为唯一选择
+                  setSelectedUsers([currentUser]);
+                }
+              }}>
+                数据管理
+              </button>
+
+
+
+
               <button onClick={handleLogout}>
                 退出
               </button>
@@ -1245,6 +1476,289 @@ const UserMenu = ({
           </div>
         </div>
       )}
+
+      {/*// 用户数据管理弹窗组件*/}
+      {showUserDataManagement && (
+        <div className="user-management-modal-overlay">
+          <div className="user-management-modal">
+            <div className="modal-header">
+              <h3>用户数据管理</h3>
+              <button
+                className="modal-close-button"
+                onClick={() => setShowUserDataManagement(false)}
+                style={{
+                  color: 'black',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0',
+                  width: '30px',
+                  height: '30px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px'
+                }}
+              >
+                x
+              </button>
+            </div>
+
+            <div className="user-management-content">
+              {/* 管理员模式下显示用户选择 */}
+              {userPermissions.includes('admin') && (
+                <div className="user-selection-section" style={{ marginBottom: '20px', padding: '1px', border: '1px solid #ddd', borderRadius: '4px',color: '#333' }}>
+                  <h4>选择用户</h4>
+                  <div style={{ display:'flex', flexDirection:'column',fontSize: '12px', color: '#666',textAlign: 'start',  }}>
+                    {selectedUsers.length > 0
+                      ? `已选择 ${selectedUsers.length} 个用户`
+                      : '请选择需要备份的用户'}
+                    <div style={{ display:'flex', flexDirection:'row',marginBottom:'10px'}}>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <input
+                          type="checkbox"
+                          id="select-all-current-page"
+                          checked={selectAllCurrentPage}
+                          onChange={handleSelectAllCurrentPage}
+                          style={{ marginRight: '8px' }}
+                        />
+                        <label htmlFor="select-all-current-page">当前页</label>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <input
+                          type="checkbox"
+                          id="select-all-users"
+                          checked={selectAllUsers}
+                          onChange={handleSelectAllUsers}
+                          style={{ marginRight: '8px' }}
+                        />
+                        <label htmlFor="select-all-users">全选</label>
+                      </div>
+                    </div>
+
+                  </div>
+
+
+
+                  <div style={{display: 'flex', flexDirection: 'row', maxHeight: '200px', overflowY: 'auto', marginBottom: '15px',  }}>
+                    {users.slice((currentUserDataPage - 1) * userDataLogsPerPage, currentUserDataPage * userDataLogsPerPage).map((user, index) => (
+                      <div key={user.username} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px',marginRight: '10px' }}>
+                        <input
+                          type="checkbox"
+                          id={`user-${user.username}`}
+                          checked={selectedUsers.includes(user.username)}
+                          onChange={() => handleUserSelect(user.username)}
+                          style={{ marginRight: '8px' }}
+                        />
+                        <label htmlFor={`user-${user.username}`}>{user.username}</label>
+                      </div>
+                    ))}
+                  </div>
+
+
+                  <div className="pagination-controls">
+                    <button
+                      onClick={() => userDataPaginate(1)}
+                      disabled={currentUserDataPage === 1}
+                      className="pagination-btn"
+                      title="第一页"
+                    >
+                      {"<<"}
+                    </button>
+
+                    <button
+                      onClick={() => userDataPaginate(currentUserDataPage - 1)}
+                      disabled={currentUserDataPage === 1}
+                      className="pagination-btn"
+                      title="上一页"
+                    >
+                      {"<"}
+                    </button>
+
+                    {/* 整合的页码输入框 */}
+                    <div className="page-input-container">
+                      <input
+                        type="number"
+                        min="1"
+                        max={totalUserDataPages}
+                        value={userDataInputPage}
+                        onChange={(e) => {
+                          const page = parseInt(e.target.value) || '';
+                          setUserDataInputPage(page);
+                        }}
+                        onBlur={() => {
+                          // 失焦时如果输入有效页码则跳转
+                          if (userDataInputPage >= 1 && userDataInputPage <= totalUserDataPages && userDataInputPage !== currentUserDataPage) {
+                            userDataPaginate(userDataInputPage);
+                          }
+                          // 如果输入无效页码，重置为当前页
+                          if (userDataInputPage < 1 || userDataInputPage > totalUserDataPages) {
+                            setUserDataInputPage(currentUserDataPage);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          // 按回车键时跳转
+                          if (e.key === 'Enter') {
+                            if (userDataInputPage >= 1 && userDataInputPage <= totalUserDataPages && userDataInputPage !== currentUserDataPage) {
+                              userDataPaginate(userDataInputPage);
+                            }
+                            // 如果输入无效页码，重置为当前页
+                            if (userDataInputPage < 1 || userDataInputPage > totalUserDataPages) {
+                              setUserDataInputPage(currentUserDataPage);
+                            }
+                          }
+                        }}
+                        className="page-input"
+                      />
+                      <span className="page-total">/ {totalUserDataPages || 1}</span>
+                    </div>
+
+                    <button
+                      onClick={() => userDataPaginate(currentUserDataPage + 1)}
+                      disabled={currentUserDataPage === totalUserDataPages || totalUserDataPages === 0}
+                      className="pagination-btn"
+                      title="下一页"
+                    >
+                      {">"}
+                    </button>
+
+                    <button
+                      onClick={() => userDataPaginate(totalUserDataPages)}
+                      disabled={currentUserDataPage === totalUserDataPages || totalUserDataPages === 0}
+                      className="pagination-btn"
+                      title="最后一页"
+                    >
+                      {">>"}
+                    </button>
+
+                    <select
+                      value={userDataLogsPerPage}
+                      onChange={(e) => {
+                        const newUserDataLogsPerPage = Number(e.target.value);
+                        setUserDataLogsPerPage(newUserDataLogsPerPage);
+                        // localStorage.setItem('logsPerPage', newUserDataLogsPerPage.toString());
+                        userDataManager.setUserData('userDataLogsPerPage', newUserDataLogsPerPage.toString());
+                        setCurrentUserDataPage(1); // 重置到第一页
+                        setUserDataInputPage(1); // 同步更新输入框的值
+                      }}
+                      className="logs-per-page-select"
+                    >
+                      <option value="10">10/页</option>
+                      <option value="20">20/页</option>
+                      <option value="50">50/页</option>
+                      <option value="100">100/页</option>
+                      <option value="200">200/页</option>
+                    </select>
+                  </div>
+
+
+                </div>
+              )}
+
+              {/* 普通用户显示提示信息 */}
+              {!userPermissions.includes('admin') && (
+                <div className="user-selection-section" style={{ marginBottom: '20px', border: '1px solid #ddd', borderRadius: '4px',color: '#333' }}>
+                  <h4>当前用户({currentUser})</h4>
+                  <div style={{ marginBottom: '15px' }}>
+                    <p>您只能备份和还原自己的数据 </p>
+                  </div>
+                </div>
+              )}
+
+              {/* 操作按钮区域 */}
+              <div className="backup-restore-section" style={{  border: '1px solid #ddd', borderRadius: '4px', color: '#333' }}>
+                <h4>数据备份与还原</h4>
+
+                {!userPermissions.includes('admin') && (
+                  <div style={{ marginBottom: '15px' }}>
+                    <p>支持.zip格式文件</p>
+                  </div>
+                )}
+                {userPermissions.includes('admin') && (
+                  <div style={{ marginBottom: '15px' }}>
+                    <p>支持.zip格式文件</p>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '15px', marginBottom: '15px', justifyContent: 'center'}}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <button
+                            onClick={handleBackup}
+                            disabled={backupLoading}
+                            style={{
+                                padding: '10px 20px',
+                                background: '#007bff',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                opacity: backupLoading ? 0.6 : 1
+                            }}
+                        >
+                            {backupLoading ? '备份中...' : '备份数据'}
+                        </button>
+
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+
+                        <input
+                            type="file"
+                            id="restore-file"
+                            accept=".zip"
+                            onChange={handleRestore}
+                            disabled={restoreLoading}
+                            style={{ display: 'none' }}
+                        />
+                        <label
+                            htmlFor="restore-file"
+                            style={{
+                                padding: '8px 14px',
+                                background: '#28a745',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                display: 'inline-block',
+                                opacity: restoreLoading ? 0.6 : 1
+                            }}
+                            title="选择备份文件(.zip)"
+                        >
+                            {restoreLoading ? '还原中...' : '还原数据'}
+                        </label>
+
+                    </div>
+                </div>
+
+                {restoreResult && (
+                    <div style={{
+                        padding: '10px',
+                        backgroundColor: '#d4edda',
+                        color: '#155724',
+                        border: '1px solid #c3e6cb',
+                        borderRadius: '4px',
+                        marginTop: '10px'
+                    }}>
+                        <strong>还原结果:</strong>
+                        <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                            {restoreResult.message && <li>{restoreResult.message}</li>}
+                            {restoreResult.users && restoreResult.users.map((user, index) => (
+                                <li key={index}>用户: {user}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
+
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
 
     </div>
   );

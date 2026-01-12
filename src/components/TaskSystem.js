@@ -1409,7 +1409,7 @@ const TaskSystem = ({
           <div className="modal-body">
             <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center'}}>
               <p>拖拽按钮调整顺序，勾选按钮以显示在工具栏上</p>
-              <button className="btn-reset" onClick={resetToDefault} title="恢复默认配置">⟳</button>
+              <button className="btn-reset" onClick={resetToDefault} title="恢复默认配置">↶</button>
             </div>
 
             <ul
@@ -1890,7 +1890,7 @@ const TaskSystem = ({
                 onMouseEnter={handleButtonMouseEnter}
                 onMouseLeave={handleButtonMouseLeave}
               >
-                🗐
+                🧾
               </button>
             );
 
@@ -1925,7 +1925,7 @@ const TaskSystem = ({
                 onMouseEnter={handleButtonMouseEnter}
                 onMouseLeave={handleButtonMouseLeave}
               >
-                🔄
+                ⟳
               </button>
             );
 
@@ -1940,7 +1940,7 @@ const TaskSystem = ({
                 onMouseEnter={handleButtonMouseEnter}
                 onMouseLeave={handleButtonMouseLeave}
               >
-                ⚙
+                🔧
               </button>
             );
 
@@ -3091,7 +3091,7 @@ const TaskSystem = ({
             {/* 设置模态框 */}
             <SettingsModal
               isOpen={isSettingsModalOpen}
-              title="任务系统设置"
+              title="任务模块设置"
               onClose={() => setIsSettingsModalOpen(false)}
               targetGroup={['general','action-buttons', 'board-view', 'calendar-view', 'task-field-mapping','border', 'effects' ]}
               settings={settings}
@@ -3557,7 +3557,7 @@ const TaskSystem = ({
                         cursor: 'pointer',
                         boxSizing: 'border-box',
                       }}>
-                        查看
+                        📄 查看
                       </button>
                       {/* 添加编辑按钮 */}
                       <button onClick={(e) => {
@@ -3575,7 +3575,7 @@ const TaskSystem = ({
                         cursor: 'pointer',
                         boxSizing: 'border-box',
                       }}>
-                        编辑
+                        🖍 编辑
                       </button>
                       <button onClick={(e) => {
                         e.stopPropagation();
@@ -3595,7 +3595,7 @@ const TaskSystem = ({
                         cursor: 'pointer',
                         boxSizing: 'border-box',
                       }}>
-                        复制
+                        🗐 复制
                       </button>
                       <button onClick={(e) => {
                         e.stopPropagation();
@@ -3611,7 +3611,7 @@ const TaskSystem = ({
                         boxSizing: 'border-box',
 
                       }}>
-                        删除
+                        ❌ 删除
                       </button>
                     </div>
                   )}

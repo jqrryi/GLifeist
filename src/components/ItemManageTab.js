@@ -2779,7 +2779,7 @@ const ItemManageTab = ({
                             lootBoxes: info.lootBoxes || [],
                           });
                         }} title="编辑">✎</button>
-                        <button onClick={() => handleCopyItem(name)} title="复制">✂</button>
+                        <button onClick={() => handleCopyItem(name)} title="复制">🗐</button>
                         <button onClick={() => handleDeleteItem(name)} title="删除">❌</button>
                       </td>
                     </>
@@ -3602,7 +3602,7 @@ const ItemManageTab = ({
 
             <div>
               <button onClick={handleSaveRecipe} className="btn btn-success">
-                添加配方
+                {editingRecipeIndex !== null ? `更新配方` : '添加配方'}
               </button>
               <button
                 onClick={() => {
@@ -3807,7 +3807,7 @@ const ItemManageTab = ({
 
             <div>
               <button onClick={handleSaveLootBox} className="btn btn-success">
-                添加开箱效果
+                {editingLootBoxIndex !== null ? `更新开箱效果` : '添加开箱效果'}
               </button>
               <button
                 onClick={() => {
