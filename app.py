@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, jsonify, request, send_from_directory,session
+from flask import Flask, jsonify, request, send_from_directory,session, send_file
 from flask_cors import CORS
 import os, csv, json, shutil, glob, io, time
 from datetime import datetime,timedelta, date
@@ -15,6 +15,7 @@ import bcrypt
 from functools import wraps
 import threading
 # from dotenv import load_dotenv
+import zipfile, tempfile
 
 
 # 初始化Flask应用（必须在所有使用app的代码之前）
@@ -62,7 +63,7 @@ JWT_SECRET = validate_jwt_secret()
 JWT_ALGORITHM = 'HS256'
 JWT_ACCESS_EXPIRATION_DELTA = timedelta(minutes=120)
 JWT_REFRESH_EXPIRATION_DELTA = timedelta(days=7)
-JWT_LONG_TERM_EXPIRATION_DELTA = timedelta(days=14)
+JWT_LONG_TERM_EXPIRATION_DELTA = timedelta(days=365)
 
 # safe_save时检查数据完整性参数
 MAX_DIFFERENT_FIELDS=2
@@ -70,7 +71,7 @@ MAX_DIFFERENT_ITEMS_PER_FIELD=10
 
 # 备份配置
 _last_backup_time = None
-_backup_interval = 300  # 5分钟间隔
+_backup_interval = 600  # 10分钟间隔
 _max_backups = 10  # 最多保留10个备份
 
 
@@ -86,6 +87,14 @@ DEFAULT_DATA_FILES = ['settings.json', 'logs.json', 'master_data.json']
 
 
 default_settings = {
+    "actionButtonSettings": {
+        "archive": "hidden",
+        "complete": "visible",
+        "copy": "hidden",
+        "delete": "hidden",
+        "edit": "visible",
+        "view": "hidden"
+    },
     "allowFormulasEditing": False,
     "allowManualCreditEditing": False,
     "boardViewSettings": {
@@ -6912,6 +6921,210 @@ def get_toolbar_settings():
     except Exception as e:
         print(f"获取工具栏设置时出错: {str(e)}")
         return jsonify({"error": f"获取工具栏设置失败: {str(e)}"}), 500
+
+
+# 用户数据备份API（修改版）
+@app.route('/api/user/backup', methods=['POST'])
+@token_required()
+def backup_user_data(current_user=None):
+    try:
+        #如果装饰器没有正确注入current_user，从request对象中获取
+        data = request.get_json()
+        users_to_backup = data.get('users', [])
+
+        users_db= get_user_db()
+        if current_user is None:
+            current_user = data.get('current_user')
+
+        # # 普通用户只能备份自己的数据
+        # if current_user['profile'].get('permissions', []) != ['admin']:
+        #     users_to_backup = [current_user['username']]
+        # else:
+        #     # 管理员验证权限
+        #     if current_user['username'] not in users_to_backup:
+        #         return jsonify({'error': '无权限备份其他用户数据'}), 403
+        # 创建临时zip文件
+        temp_dir = tempfile.mkdtemp()
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        zip_path = os.path.join(temp_dir, f"user_backup_{timestamp}.zip")
+
+
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for username in users_to_backup:
+                user_dir = os.path.join(USERS_DIR, username)
+                if os.path.exists(user_dir):
+                    # 添加用户数据文件夹
+                    for root, dirs, files in os.walk(user_dir):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            # 计算相对路径
+                            relative_path = os.path.relpath(file_path, USERS_DIR)
+                            zipf.write(file_path, f"users/{relative_path}")
+
+            # 对于管理员，添加users.json中对应的用户信息
+            if 'admin' in users_db[current_user].get('permissions',[]): #current_user['profile'].get('permissions', []) == ['admin']:
+                # users_db = get_user_db()
+                # backup_users_info = {}
+                # for username in users_to_backup:
+                #     if username in users_db:
+                #         backup_users_info[username] = users_db[username]
+
+                # 将用户信息写入zip
+                # users_info_path = os.path.join(temp_dir, 'users_info.json')
+                # with open(users_info_path, 'w', encoding='utf-8') as f:
+                #     json.dump(backup_users_info, f, ensure_ascii=False, indent=2)
+                users_info_path = os.path.join(USERS_DIR, 'users.json')
+                zipf.write(users_info_path, 'users.json')
+
+        return send_file(zip_path, as_attachment=True, download_name=os.path.basename(zip_path))
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# 用户数据还原API
+@app.route('/api/user/restore', methods=['POST'])
+@token_required()
+def restore_user_data(current_user=None):
+    try:
+        # 如果装饰器没有正确注入current_user，从request对象中获取
+        # print('request.form', request.form)
+        # print('request.files', request.files)
+        if current_user is None:
+            current_user = getattr(request, 'current_user', None)
+            if current_user is None:
+                return jsonify({'error': 'Authentication required'}), 401
+        users_db = get_user_db()
+        is_admin = 'admin' in users_db[current_user].get('permissions', [])
+
+        if 'backup' not in request.files:
+            return jsonify({'error': '未提供备份文件'}), 400
+
+        file = request.files['backup']
+        if file.filename == '':
+            return jsonify({'error': '未选择文件'}), 400
+
+        # 验证文件类型
+        if not file.filename.lower().endswith('.zip'):
+            return jsonify({'error': '文件格式不正确，仅支持.zip文件'}), 400
+
+        # 创建临时目录
+        temp_dir = tempfile.mkdtemp()
+        zip_path = os.path.join(temp_dir, file.filename)
+        file.save(zip_path)
+
+        # 提取备份文件
+        extracted_dir = os.path.join(temp_dir, 'extracted')
+        os.makedirs(extracted_dir, exist_ok=True)
+
+        with zipfile.ZipFile(zip_path, 'r') as zipf:
+            zipf.extractall(extracted_dir)
+
+        # 检查是否为管理员备份（包含users_info.json）
+        users_info_path = os.path.join(extracted_dir, 'users.json')
+        is_admin_backup = os.path.exists(users_info_path)
+
+        # 权限检查
+        if is_admin_backup and not is_admin:
+            return jsonify({'error': '普通用户不能还原包含用户信息的备份'}), 403
+
+        if is_admin_backup and is_admin:
+            # 管理员还原流程
+            with open(users_info_path, 'r', encoding='utf-8') as f:
+
+                backup_users_info = json.load(f)
+                print('1users_info_path:', users_info_path)
+                print('2backup_users_info:', backup_users_info)
+
+            # 还原用户数据文件夹
+            users_backup_dir = os.path.join(extracted_dir, 'users')
+            print('3users_backup_dir:', users_backup_dir)
+            if os.path.exists(users_backup_dir):
+                # 只还原那些在users文件夹中存在对应子文件夹的用户
+                valid_users_to_restore = []
+                for username in os.listdir(users_backup_dir):
+                    print('dir username', username)
+                    user_backup_path = os.path.join(users_backup_dir, username)
+                    if os.path.isdir(user_backup_path):
+                        valid_users_to_restore.append(username)
+                print('4valid_users_to_restore:', valid_users_to_restore)
+                # 检查这些有效用户是否已在当前系统中存在
+                existing_users = []
+                for username in valid_users_to_restore:
+                    if username in users_db:
+                        existing_users.append(username)
+                print('5existing_users:', existing_users)
+                if existing_users:
+                    return jsonify({
+                        'error': f'还原失败，以下用户已存在: {", ".join(existing_users)}'
+                    }), 400
+
+                # 只还原有效的用户信息到users.json
+                filtered_backup_users_info = {username: backup_users_info[username]
+                                              for username in valid_users_to_restore
+                                              if username in backup_users_info}
+                print('6filtered_backup_users_info:', filtered_backup_users_info)
+                # 添加有效的用户信息到users.json
+                users_db.update(filtered_backup_users_info)
+                print('7users_db:', users_db)
+                save_user_db(users_db)
+
+                # 还原对应的用户数据文件夹
+                for username in valid_users_to_restore:
+                    user_backup_path = os.path.join(users_backup_dir, username)
+                    if os.path.isdir(user_backup_path):
+                        target_user_dir = os.path.join(USERS_DIR, username)
+
+                        # 检查目标目录是否存在
+                        if os.path.exists(target_user_dir):
+                            # 备份现有数据
+                            backup_suffix = f"_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                            os.rename(target_user_dir, f"{target_user_dir}{backup_suffix}")
+
+                        # 移动备份数据到目标目录
+                        import shutil
+                        shutil.copytree(user_backup_path, target_user_dir)
+        else:
+            # 普通用户还原流程 - 直接覆盖当前用户数据
+            users_backup_dir = os.path.join(extracted_dir, 'users')
+            if os.path.exists(users_backup_dir):
+                # 普通用户只能还原自己的数据
+                username = current_user
+                user_backup_path = os.path.join(users_backup_dir, username)
+
+                if os.path.exists(user_backup_path):
+                    target_user_dir = os.path.join(USERS_DIR, username)
+
+                    # 备份现有数据
+                    if os.path.exists(target_user_dir):
+                        backup_suffix = f"_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                        os.rename(target_user_dir, f"{target_user_dir}{backup_suffix}")
+
+                    # 移动备份数据到目标目录
+                    import shutil
+                    shutil.copytree(user_backup_path, target_user_dir)
+                else:
+                    return jsonify({'error': f'备份文件中不包含用户 {username} 的数据'}), 400
+
+        # 清理临时文件
+        import shutil
+        shutil.rmtree(temp_dir)
+
+        # 确定还原的用户数量
+        if is_admin_backup:
+            user_count = len(valid_users_to_restore) if 'valid_users_to_restore' in locals() else 0
+            usernames = valid_users_to_restore if 'valid_users_to_restore' in locals() else []
+        else:
+            user_count = 1
+            usernames = [current_user]
+
+        return jsonify({
+            'message': f'成功还原 {user_count} 个用户的数据',
+            'users': usernames
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     # env, debug = get_app_config()
