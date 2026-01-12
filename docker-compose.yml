@@ -18,9 +18,10 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./users:/app/users  # 持久化用户数据
+      - ./users:/app/users
     environment:
       - FLASK_ENV=production
       - FLASK_DEBUG=False
       - JWT_SECRET=jwt-secret-key-in-production-for-glifeist
+
     restart: unless-stopped
